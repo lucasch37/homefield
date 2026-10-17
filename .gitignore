@@ -1,0 +1,8 @@
+dswx_wtr/
+heat_cache/
+ground_cache/
+.venv*/
+*.log
+*.npz
+.DS_Store
+__pycache__/
