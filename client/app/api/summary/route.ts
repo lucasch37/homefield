@@ -1,5 +1,4 @@
 import { normalizeReport } from "@/lib/types";
-import { hazardMeta } from "@/lib/hazards";
 
 export async function POST(request: Request) {
   if (!process.env.XAI_API_KEY)
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
           },
           {
             role: "user",
-            content: JSON.stringify({ report, actions: hazardMeta }),
+            content: JSON.stringify(report),
           },
         ],
       }),

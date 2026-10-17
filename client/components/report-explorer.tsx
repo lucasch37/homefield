@@ -3,7 +3,6 @@ if (typeof window !== "undefined") {
   (window as Window & { __explorer?: boolean }).__explorer = true;
 }
 import { fetchJSON } from "@/lib/api";
-import { demoReport, demoSummary } from "@/lib/demo-report";
 import { normalizeReport, type Report } from "@/lib/types";
 import { MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -14,13 +13,12 @@ import { ReportSummary } from "./report-summary";
 import { VoiceControls } from "./voice-controls";
 
 export default function ReportExplorer() {
-  const [report, setReport] = useState<Report | null>(demoReport);
+  const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [summary, setSummary] = useState(demoSummary);
+  const [summary, setSummary] = useState("");
   const [summaryError, setSummaryError] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
-  const [isDemo, setIsDemo] = useState(true);
   const request = useRef<AbortController | null>(null);
   const [searchId, setSearchId] = useState(0);
 
@@ -35,7 +33,6 @@ export default function ReportExplorer() {
     setSummary("");
     setSummaryError("");
     setSummaryLoading(false);
-    setIsDemo(false);
     setLoading(true);
     try {
       const result = normalizeReport(
@@ -46,9 +43,7 @@ export default function ReportExplorer() {
       );
       if (controller.signal.aborted) return;
       if (!result.in_king_county) {
-        setError(
-          "We're starting close to home. This report currently covers King County, Washington. Try an address within the county.",
-        );
+        setError(result.message || "We're starting close to home. This report currently covers King County, Washington. Try an address within the county.");
         return;
       }
       setReport(result);
@@ -88,6 +83,7 @@ export default function ReportExplorer() {
   }
   const focusSection =
     "scroll-mt-7 mt-4 mb-20 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-[7px] focus-visible:outline-ring";
+  const initialState = searchId === 0 && !error;
   return (
     <main
       id="main-content"
@@ -163,25 +159,36 @@ export default function ReportExplorer() {
             <HazardMap report={report} loading={loading} />
           </div>
 
-          <HazardDashboard report={report} loading={loading} isDemo={isDemo} />
-
-          {report && (
-            <div className="mx-auto mt-10 max-w-[1240px]">
-              <ReportSummary
-                loading={summaryLoading}
-                summary={summary}
-                error={summaryError}
-              />
+          {initialState ? (
+            <div
+              className="mx-auto mt-10 flex min-h-[320px] max-w-[1240px] items-center justify-center rounded-2xl bg-[#d9dcd8] px-6 text-center text-sm text-[#68736d]"
+              aria-label="Report placeholder"
+            >
+              Enter an address first to see the report.
             </div>
-          )}
+          ) : (
+            <>
+              <HazardDashboard report={report} loading={loading} />
 
-          <div
-            id="voice"
-            className={`${focusSection} mx-auto max-w-[1240px]`}
-            tabIndex={-1}
-          >
-            <VoiceControls key={searchId} report={report} />
-          </div>
+              {report && (
+                <div className="mx-auto mt-10 max-w-[1240px]">
+                  <ReportSummary
+                    loading={summaryLoading}
+                    summary={summary}
+                    error={summaryError}
+                  />
+                </div>
+              )}
+
+              <div
+                id="voice"
+                className={`${focusSection} mx-auto max-w-[1240px]`}
+                tabIndex={-1}
+              >
+                <VoiceControls key={searchId} report={report} />
+              </div>
+            </>
+          )}
         </div>
       </section>
     </main>

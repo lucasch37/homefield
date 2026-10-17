@@ -27,3 +27,14 @@ python3 -m venv .venv
 ```
 
 Open [API docs](http://localhost:8000/docs) or [health](http://localhost:8000/health). The delivered files remain under `server/data/`, following the [data contract](server/docs/data-contract.md). Pipeline environments and caches are separate from server deployment.
+
+In a second terminal, start the frontend. In development it connects to the API at `http://127.0.0.1:8000` by default; set `BACKEND_URL` in `client/.env.local` to use another server:
+
+```sh
+cd client
+cp .env.example .env.local
+pnpm install
+pnpm dev
+```
+
+Open [the address search](http://localhost:3000/search). The browser calls the Next.js `/api/report` route, which keeps the backend URL server-side and forwards requests to FastAPI `/hazards`.

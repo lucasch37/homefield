@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
 
 const source = { name: 'TEST FIXTURE — not satellite data', dates: 'Test observation dates', resolution_m: 30, limitations: ['Synthetic test data. Do not use to assess a home.'] };
-const fixture = { address: 'TEST FIXTURE — Seattle, WA', lat: 47.6198, lon: -122.3489, in_king_county: true, hazards: { flood: { status: 'flooded', observed_passes: 12, wet_passes: 1, last_wet: '2025-12-10', source }, heat: { status: 'ok', surface_temp_f: 93.4, county_percentile: 72, diff_from_median_f: 4.2, source }, ground_motion: { status: 'not_available', source } } };
+const fixture = { address: 'TEST FIXTURE — Seattle, WA', lat: 47.6198, lon: -122.3489, in_king_county: true, hazards: { flood: { status: 'flooded', observed_passes: 12, wet_passes: 1, last_wet: '2025-12-10', action: 'Test flood action', source }, heat: { status: 'ok', surface_temp_f: 93.4, county_percentile: null, diff_from_median_f: null, recent_relative_f: 4.2, lowland_percentile: 72, comparison_area: 'TEST FIXTURE lowland', action: 'Test heat action', source }, ground_motion: { status: 'not_available', action: 'Test ground action', source } } };
 const backend = createServer((req, res) => {
   const address = new URL(req.url, 'http://localhost').searchParams.get('address');
   res.setHeader('Content-Type', 'application/json');
   if (address === 'missing') { res.writeHead(404); res.end('{}'); }
-  else if (address === 'outside') res.end(JSON.stringify({ in_king_county: false }));
+  else if (address === 'outside') res.end(JSON.stringify({ address: 'Outside', lat: 45.5, lon: -122.6, in_king_county: false, hazards: null, message: 'Test outside coverage' }));
   else if (address === 'broken') res.end(JSON.stringify({ ...fixture, hazards: { ...fixture.hazards, heat: null } }));
   else res.end(JSON.stringify(fixture));
 });
@@ -39,6 +39,9 @@ try {
   assert.equal(partial.hazards.heat.status, 'error'); assert.equal(partial.hazards.flood.status, 'flooded');
   const report = await (await get('/api/report?address=fixture')).json();
   assert.equal(report.hazards.heat.surface_temp_f, 93.4);
+  assert.equal(report.hazards.heat.lowland_percentile, 72);
+  assert.equal(report.hazards.heat.recent_relative_f, 4.2);
+  assert.equal(report.hazards.heat.action, 'Test heat action');
   assert.equal((await get('/maplibre-worker.mjs')).status, 200);
   assert.equal((await fetch('http://localhost:3012/api/summary', { method: 'POST', body: JSON.stringify(report) })).status, 503);
   assert.equal((await fetch('http://localhost:3012/api/voice-token', { method: 'POST' })).status, 503);
