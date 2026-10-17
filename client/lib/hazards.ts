@@ -14,7 +14,10 @@ export function finding(hazard: Hazard, kind: HazardKind): { label: string; text
     case "no_flooding_seen": return { label: "Not observed", text: `No flooding was observed in ${hazard.observed_passes} satellite passes. This does not rule out flooding.` };
     case "permanent_water": return { label: "Persistent water", text: "Water was observed on at least half of valid passes, consistent with a persistent water body." };
     case "ok":
-      if (kind === "heat") return { label: "Observed", text: "Ground and roof surface temperature on the observed days, not air or indoor temperature.", metric: `${hazard.surface_temp_f?.toFixed(1)}°F`, detail: hazard.diff_from_median_f !== undefined ? `${Math.abs(hazard.diff_from_median_f).toFixed(1)}°F ${hazard.diff_from_median_f >= 0 ? "above" : "below"} the county median` : undefined };
+      if (kind === "heat") {
+        const difference = hazard.recent_relative_f ?? hazard.diff_from_median_f;
+        return { label: "Observed", text: "Ground and roof surface temperature on the observed days, not air or indoor temperature.", metric: `${hazard.surface_temp_f?.toFixed(1)}°F`, detail: difference !== undefined ? `${Math.abs(difference).toFixed(1)}°F ${difference >= 0 ? "above" : "below"} ${hazard.recent_relative_f !== undefined ? "the daily lowland median" : "the county median"}` : undefined };
+      }
       return { label: "Observed", text: "Slow movement measured along the satellite’s line of sight. This does not measure earthquake shaking.", metric: `${hazard.velocity_mm_per_yr?.toFixed(1)} mm/yr`, detail: "Direction requires the source’s verified sign convention." };
   }
 }

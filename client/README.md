@@ -10,7 +10,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Set `BACKEND_URL` to your FastAPI service. It must implement `GET /hazards?address=...` using the PRD's report schema. A missing backend displays a friendly service-unavailable message; the app does not generate or substitute hazard observations.
+Set `BACKEND_URL` to your FastAPI service. It must implement `GET /hazards?address=...` using the PRD's report schema. Local development defaults to `http://127.0.0.1:8000`; production requires `BACKEND_URL`. A missing backend displays a friendly service-unavailable message; the app does not generate or substitute hazard observations.
 
 Set `XAI_API_KEY` for the written Grok summary and voice follow-ups. Optionally set `XAI_TEXT_MODEL` to a text model enabled for your account. All credentials remain server-side. Restart the dev server after environment changes.
 
