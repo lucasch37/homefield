@@ -14,28 +14,29 @@ Outputs (in OUT_DIR):
                       band 2  valid (1 = reliable per NASA's recommended_mask, else 0)
                       band 3+ cumulative displacement in mm at each chain date (first date = 0)
   ground_stats.json   chain dates, frame, window, sign note
-  ground_cache/       one file per segment read; reruns skip these
+  Cached segments live separately in pipelines/.cache/ground_motion/.
 
 Usage (Python 3.12 environment):
-  pip install earthaccess xarray h5netcdf h5py pyproj rasterio numpy
-  python build_ground_motion.py --plan     # print which files are needed, read nothing (~1 min)
-  python build_ground_motion.py            # full run (~2 min per file; safe to rerun if stopped)
+  python -m pipelines.builders.build_ground_motion --plan  # inspect the remote acquisition plan
+  python -m pipelines.builders.build_ground_motion         # full build
 """
+import argparse
 import json
 import os
 import re
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import numpy as np
 
+from pipelines.paths import CACHE_ROOT, DATA_ROOT
+
 FRAME = "F16951"
 WINDOW = (-122.45, 47.38, -121.90, 47.78)  # west, south, east, north: Seattle, Eastside, Snoqualmie Valley
 VARIABLE = "short_wavelength_displacement"  # what the ASF portal's velocity map uses; float32, half the size
-OUT_DIR = "."
-CACHE_DIR = "ground_cache"
+OUT_DIR = DATA_ROOT / "ground_motion"
+CACHE_DIR = CACHE_ROOT / "ground_motion"
 WORKERS = 3
 MIN_SEGMENTS = 6  # of 8: how many segments a pixel needs to get a velocity
 NAME = re.compile(r"_(F\d+)_VV_(\d{8})T\d{6}Z_(\d{8})T\d{6}Z_v[\d.]+_(\d{8}T\d{6})Z")
@@ -94,7 +95,10 @@ def decimal_year(day):
     return d.year + (d - start).days / 365.25
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Build ground motion into server/data/ground_motion/.")
+    parser.add_argument("--plan", action="store_true", help="Inspect the acquisition plan without building rasters (requires Earthdata)")
+    args = parser.parse_args(argv)
     import earthaccess
     earthaccess.login(persist=True)
     granules = earthaccess.search_data(short_name="OPERA_L3_DISP-S1_V1", granule_name=f"*{FRAME}*", count=500)
@@ -104,7 +108,7 @@ def main():
         print(f"  {ref} -> {end}")
     for w in warnings:
         print("  warning:", w)
-    if "--plan" in sys.argv:
+    if args.plan:
         return
 
     import rasterio
@@ -112,6 +116,7 @@ def main():
     from pyproj import CRS, Transformer
     from rasterio.transform import from_origin
 
+    os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(CACHE_DIR, exist_ok=True)
 
     # Grid, window, and the reliability mask come from the newest file.

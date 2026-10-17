@@ -6,4 +6,5 @@ ground_cache/
 *.npz
 .DS_Store
 __pycache__/
+.vscode/
 .env*

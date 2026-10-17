@@ -1,7 +1,7 @@
 """
 Look up the flood history for one location from the flood_history_<tile>.tif files.
 
-  from flood_lookup import flood_history
+  from pipelines.validation.flood_lookup import flood_history
   flood_history(47.664, -121.920)
 """
 import glob
@@ -11,7 +11,9 @@ from datetime import date, timedelta
 import rasterio
 from pyproj import Transformer
 
-HISTORY_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "flood")
+from pipelines.paths import DATA_ROOT
+
+HISTORY_DIR = DATA_ROOT / "flood"
 EPOCH = date(2024, 9, 1)  # must match build_flood_history.py
 MIN_OBSERVED = 10          # fewer valid passes than this = not enough data to say anything
 PERMANENT_SHARE = 0.5      # wet on at least half of passes = river or lake, not a flood
