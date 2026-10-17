@@ -1,0 +1,39 @@
+# Local Python environments
+.venv/
+venv/
+env/
+
+# Python and tool caches
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.ruff_cache/
+.mypy_cache/
+
+# Local configuration and secrets (keep the shared example)
+.env
+.env.*
+!.env.example
+
+# Keep delivered datasets tracked; exclude raw downloads and intermediate caches
+dswx_wtr/
+heat_cache/
+ground_cache/
+*.npz
+downloads/
+raw_downloads/
+
+# Python build outputs
+*.egg-info/
+build/
+dist/
+
+# Test coverage and local logs
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.log
+
+# macOS metadata
+.DS_Store
