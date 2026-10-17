@@ -4,6 +4,14 @@ Look up the flood history for one location from the flood_history_<tile>.tif fil
   from pipelines.validation.flood_lookup import flood_history
   flood_history(47.664, -121.920)
 """
+
+# Support both `python -m pipelines...` and running this file directly.
+if __package__ in {None, ""}:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import glob
 import os
 from datetime import date, timedelta

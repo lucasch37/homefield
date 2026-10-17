@@ -20,6 +20,14 @@ Usage (Python 3.12 environment):
   python -m pipelines.builders.build_ground_motion --plan  # inspect the remote acquisition plan
   python -m pipelines.builders.build_ground_motion         # full build
 """
+
+# Support both `python -m pipelines...` and running this file directly.
+if __package__ in {None, ""}:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import argparse
 import json
 import os
