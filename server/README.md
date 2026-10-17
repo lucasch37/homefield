@@ -2,15 +2,22 @@
 
 FastAPI backend for [the PRD](docs/prd.md). All implementation and tests live in `server/`. Satellite downloads and processing are left to the data pipeline team. The backend reads prepared local GeoTIFFs and never downloads satellite data during a report request.
 
-## Run
+## Run locally
 
 Python 3.11+ is required. Run these commands from `server/`:
 
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt
-DATA_DIR=./data .venv/bin/uvicorn app.main:app --reload --port 8000
 ```
+
+Start the local server from `server/`:
+
+```sh
+.venv/bin/uvicorn app.main:app --reload --port 8000
+```
+
+The server reads `server/data/` by default. Keep this terminal running; `--reload` restarts the server when Python files change.
 
 Open [interactive API docs](http://localhost:8000/docs), [OpenAPI JSON](http://localhost:8000/openapi.json), or [health](http://localhost:8000/health).
 

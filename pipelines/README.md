@@ -73,6 +73,14 @@ pipelines/.venv/bin/python -m pipelines.validation.ground_lookup
 
 These read the same `server/data/` files. Their calculations intentionally retain the data team's behavior: heat averages a 5×5 neighborhood, ground motion averages a 3×3 neighborhood, and flood includes a `frequently_wet` category. Their exploratory labels and sign interpretations are not the application's report contract. `server/app/layers.py` uses containing-pixel reads with its own response models and verified limitations.
 
+You can also run the lookup and builder files directly, including from an editor's Run button. They locate the repository from their own file path, so the working directory does not need to be the repository root:
+
+```sh
+pipelines/.venv/bin/python pipelines/validation/flood_lookup.py
+```
+
+Use the pipeline virtual environment so Rasterio, NumPy, and pyproj are available. For `python -m pipelines...`, run from the repository root so Python can find the package.
+
 The optional inspection API preserves the previous data-team HTTP workflow:
 
 ```sh

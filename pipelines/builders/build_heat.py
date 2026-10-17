@@ -21,6 +21,14 @@ Usage:
   python -m pipelines.builders.build_heat                     # all years
   python -m pipelines.builders.build_heat --years 2024 2025   # exploratory partial build
 """
+
+# Support both `python -m pipelines...` and running this file directly.
+if __package__ in {None, ""}:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import argparse
 import json
 import math

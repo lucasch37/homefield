@@ -26,6 +26,34 @@ def test_builder_help_is_offline(module):
     assert 'usage:' in result.stdout
 
 
+@pytest.mark.parametrize('filename', [
+    'build_flood_history.py', 'build_heat.py', 'build_ground_motion.py',
+])
+def test_builder_can_be_run_directly_from_another_directory(tmp_path, filename):
+    environment = os.environ.copy()
+    environment.pop('PYTHONPATH', None)
+    script = REPO_ROOT / 'pipelines/builders' / filename
+    result = subprocess.run([sys.executable, str(script), '--help'], cwd=tmp_path,
+                            env=environment, capture_output=True, text=True, timeout=15)
+    assert result.returncode == 0, result.stderr
+    assert 'usage:' in result.stdout
+
+
+@pytest.mark.skipif(not (DATA_ROOT / 'king_county.geojson').exists(), reason='Delivered data is not installed')
+@pytest.mark.parametrize('name', ['flood_lookup', 'heat_lookup', 'ground_lookup'])
+def test_direct_lookup_matches_module_invocation(tmp_path, name):
+    environment = os.environ.copy()
+    environment.pop('PYTHONPATH', None)
+    script = REPO_ROOT / 'pipelines/validation' / f'{name}.py'
+    direct = subprocess.run([sys.executable, str(script)], cwd=tmp_path, env=environment,
+                            capture_output=True, text=True, timeout=20)
+    module = subprocess.run([sys.executable, '-m', f'pipelines.validation.{name}'],
+                            cwd=REPO_ROOT, env=environment, capture_output=True, text=True, timeout=20)
+    assert direct.returncode == 0, direct.stderr
+    assert module.returncode == 0, module.stderr
+    assert direct.stdout == module.stdout
+
+
 def test_default_paths_are_independent_of_working_directory(tmp_path):
     environment = os.environ.copy()
     environment.pop('DATA_DIR', None)

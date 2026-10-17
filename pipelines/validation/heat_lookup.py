@@ -7,6 +7,14 @@ Look up summer surface-heat history for one location from heat_history.tif + hea
 "Relative heat" = how many degrees F hotter (+) or cooler (-) this spot's surface is than the
 median of lowland King County on the same clear summer day, averaged over days.
 """
+
+# Support both `python -m pipelines...` and running this file directly.
+if __package__ in {None, ""}:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import json
 import os
 import warnings
