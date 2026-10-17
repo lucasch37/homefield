@@ -1,0 +1,1 @@
+"""Home Hazard Report backend."""
