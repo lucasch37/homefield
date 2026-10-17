@@ -9,26 +9,27 @@ Output: flood_history_<tile>.tif, one per map tile, each with 4 bands:
 Day numbers are Pacific-time days since EPOCH, where EPOCH itself is day 1.
 
 Usage:
-  pip install earthaccess rasterio numpy pyproj
-  python build_flood_history.py                  # search, download, build
-  python build_flood_history.py --skip-download  # rebuild from files already downloaded
+  python -m pipelines.builders.build_flood_history                  # search, download, build
+  python -m pipelines.builders.build_flood_history --skip-download  # rebuild cached downloads
 """
+import argparse
 import glob
 import os
 import re
-import sys
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
 import numpy as np
 import rasterio
 
+from pipelines.paths import CACHE_ROOT, DATA_ROOT
+
 BBOX = (-122.55, 47.08, -121.06, 47.78)  # King County, roughly (west, south, east, north)
 START, END = "2024-09-01", "2026-10-16"
 FLOOD_MONTHS = None  # all months; set to {11, 12, 1, 2, 3} for flood season only (about half the download)
 EPOCH = date(2024, 9, 1)
-DATA_DIR = "dswx_wtr"
-OUT_DIR = "."
+DATA_DIR = CACHE_ROOT / "flood" / "dswx_wtr"
+OUT_DIR = DATA_ROOT / "flood"
 WATER = (1, 3)    # 1 = open water, 3 = flooded vegetation
 VALID = (0, 1, 3)  # any other value = no reliable reading or not covered on that pass
 NAME = re.compile(r"_(T\w{5})_(\d{8}T\d{6})Z_(\d{8}T\d{6})Z_")
@@ -59,6 +60,7 @@ def find_urls():
 
 
 def build(files):
+    os.makedirs(OUT_DIR, exist_ok=True)
     by_tile = {}
     for f in files:
         tile, acq, _ = NAME.search(os.path.basename(f)).groups()
@@ -95,8 +97,12 @@ def build(files):
         print(f"{out}: {len(items)} passes, {int((wet > 0).sum())} pixels wet at least once")
 
 
-if __name__ == "__main__":
-    if "--skip-download" in sys.argv:
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Build flood history into server/data/flood/.")
+    parser.add_argument("--skip-download", action="store_true", help="Rebuild from cached water rasters without downloading")
+    args = parser.parse_args(argv)
+    os.makedirs(DATA_DIR, exist_ok=True)
+    if args.skip_download:
         files = glob.glob(os.path.join(DATA_DIR, "*_B01_WTR.tif"))
     else:
         import earthaccess
@@ -107,3 +113,7 @@ if __name__ == "__main__":
         wanted = {os.path.basename(u) for u in urls}
         files = [f for f in glob.glob(os.path.join(DATA_DIR, "*_B01_WTR.tif")) if os.path.basename(f) in wanted]
     build(files)
+
+
+if __name__ == "__main__":
+    main()

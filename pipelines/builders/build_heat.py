@@ -14,18 +14,17 @@ Outputs (in OUT_DIR):
                       band 4  number of clear days used (a count, not tenths)
                       band 5+ relative heat for each year in YEARS (one band per year)
   heat_stats.json     years, dates used, percentiles of recent relative heat in the lowlands
-  king_county.geojson county boundary (also usable for the backend's "in King County?" check)
-  heat_cache/         one compressed file per processed day; reruns skip these
+  ../king_county.geojson county boundary shared by the server
+  Cached scenes live separately in pipelines/.cache/heat/.
 
 Usage:
-  pip install rasterio numpy requests
-  python build_heat.py                     # all years (about 45 days; safe to rerun if stopped)
-  python build_heat.py --years 2024 2025   # quick test on fewer years
+  python -m pipelines.builders.build_heat                     # all years
+  python -m pipelines.builders.build_heat --years 2024 2025   # exploratory partial build
 """
+import argparse
 import json
 import math
 import os
-import sys
 import time
 import warnings
 
@@ -37,8 +36,10 @@ from rasterio.transform import from_origin
 from rasterio.vrt import WarpedVRT
 from rasterio.warp import Resampling, transform_bounds, transform_geom
 
-OUT_DIR = "."
-CACHE_DIR = "heat_cache"
+from pipelines.paths import CACHE_ROOT, DATA_ROOT
+
+OUT_DIR = DATA_ROOT / "heat"
+CACHE_DIR = CACHE_ROOT / "heat"
 CRS = "EPSG:32610"  # UTM zone 10N, the Landsat grid for this area
 RES = 30
 YEARS = list(range(2013, 2026))
@@ -77,7 +78,8 @@ def token():
 
 def county_geometry():
     gj = get("GET", COUNTY, params={"where": "GEOID='53033'", "outFields": "NAME", "outSR": 4326, "f": "geojson"}).json()
-    with open(os.path.join(OUT_DIR, "king_county.geojson"), "w") as f:
+    DATA_ROOT.mkdir(parents=True, exist_ok=True)
+    with open(DATA_ROOT / "king_county.geojson", "w") as f:
         json.dump(gj, f)
     return gj["features"][0]["geometry"]
 
@@ -156,10 +158,11 @@ def mean_or_nan(total, count):
     return np.where(count > 0, total / np.maximum(count, 1), np.nan)
 
 
-def main():
-    years = YEARS
-    if "--years" in sys.argv:
-        years = [int(y) for y in sys.argv[sys.argv.index("--years") + 1:]]
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Build heat history into server/data/heat/.")
+    parser.add_argument("--years", type=int, nargs="+", default=YEARS, help="Years to process (default: full history)")
+    years = parser.parse_args(argv).years
+    os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(CACHE_DIR, exist_ok=True)
 
     geom = county_geometry()

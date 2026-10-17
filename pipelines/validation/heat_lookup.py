@@ -1,7 +1,7 @@
 """
 Look up summer surface-heat history for one location from heat_history.tif + heat_stats.json.
 
-  from heat_lookup import heat_at
+  from pipelines.validation.heat_lookup import heat_at
   heat_at(47.5800, -122.3350)
 
 "Relative heat" = how many degrees F hotter (+) or cooler (-) this spot's surface is than the
@@ -15,7 +15,9 @@ import numpy as np
 import rasterio
 from pyproj import Transformer
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "heat")
+from pipelines.paths import DATA_ROOT
+
+DATA_DIR = DATA_ROOT / "heat"
 RADIUS_PX = 2       # average a 5x5 block (150 m x 150 m) so one roof or tree doesn't decide the result
 CHANGE_THRESHOLD_F = 3.0  # smaller changes are within the noise of the measurement
 NODATA = -32768

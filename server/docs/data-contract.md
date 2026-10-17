@@ -17,7 +17,7 @@ data/
     └── ground_stats.json
 ```
 
-The delivered rasters use EPSG:32610 and 30 m pixels. The API uses each file's actual CRS and geotransform to locate the containing pixel. Lookups use one pixel, with no neighborhood averaging. This differs from the separate reference scripts under the repository's `backend/`, which average neighborhoods for heat and ground motion. Those scripts are not imported by this server.
+The delivered rasters use EPSG:32610 and 30 m pixels. The API uses each file's actual CRS and geotransform to locate the containing pixel. Lookups use one pixel, with no neighborhood averaging. This differs from the data-team reference lookups in `pipelines/validation/`, which average neighborhoods for heat and ground motion. Those tools are not imported by this server. Builders in `pipelines/builders/` write this layout directly; downloads and intermediate caches stay in `pipelines/.cache/`.
 
 ## County boundary
 

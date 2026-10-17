@@ -1,7 +1,7 @@
 """
 Look up 2016-2025 ground motion for one location from ground_motion.tif + ground_stats.json.
 
-  from ground_lookup import ground_at
+  from pipelines.validation.ground_lookup import ground_at
   ground_at(47.65626, -122.2981)
 
 Values are line-of-sight (toward/away from the satellite), mostly vertical for this geometry.
@@ -15,7 +15,9 @@ import numpy as np
 import rasterio
 from pyproj import Transformer
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "ground_motion")
+from pipelines.paths import DATA_ROOT
+
+DATA_DIR = DATA_ROOT / "ground_motion"
 RADIUS_PX = 1           # 3x3 block (90 m x 90 m)
 MIN_VALID_PX = 3        # need at least this many reliable pixels in the block
 STABLE_MM_PER_YR = 3.0  # slower than this is within the measurement noise

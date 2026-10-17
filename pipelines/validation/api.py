@@ -1,7 +1,8 @@
 """
-Home Hazard Report API.
+Data-team inspection API. The application API lives in server/app/main.py.
 
-  cd backend && uvicorn main:app --reload
+  # Run from the repository root, using the pipeline virtual environment:
+  pipelines/.venv/bin/uvicorn pipelines.validation.api:app --reload --port 8001
   GET /hazards?address=400 Broad St, Seattle, WA
   GET /hazards?lat=47.664&lon=-121.920
   GET /health
@@ -20,16 +21,14 @@ from shapely.geometry import Point, shape
 from shapely.ops import unary_union
 from shapely.prepared import prep
 
-import flood_lookup
-import ground_lookup
-import heat_lookup
-from flood_lookup import flood_history
-from ground_lookup import ground_at
-from heat_lookup import heat_at
+from pipelines.paths import DATA_ROOT
+from . import flood_lookup, ground_lookup, heat_lookup
+from .flood_lookup import flood_history
+from .ground_lookup import ground_at
+from .heat_lookup import heat_at
 
 log = logging.getLogger("hazards")
 
-DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 KING_COUNTY_PATH = os.path.join(DATA_ROOT, "king_county.geojson")
 FLOOD_GLOB = os.path.join(flood_lookup.HISTORY_DIR, "flood_history_*.tif")
 HEAT_TIF = os.path.join(heat_lookup.DATA_DIR, "heat_history.tif")
@@ -43,7 +42,11 @@ CENSUS_TIMEOUT_S = 8
 CORS_ORIGINS = [o.strip() for o in os.environ.get(
     "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if o.strip()]
 
-app = FastAPI(title="Home Hazard Report API")
+app = FastAPI(
+    title="Data Inspection API",
+    description="Internal data-team tools with neighborhood-averaged reference readings. "
+                "Use server/app/main.py for application reports and verified limitations.",
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
@@ -77,9 +80,10 @@ def _read_json(path):
 def _flood_source():
     return {
         "name": "NASA JPL OPERA DSWx-S1",
-        "dates": "All radar passes, Sep 2024 to Oct 2026",
+        "dates": "",
         "resolution_m": 30,
         "limitations": [
+            "The delivered flood files do not record complete acquisition date coverage",
             "Passes are days apart and can miss a flood's peak",
             "Radar misses water under trees and tall crops",
             "Very smooth surfaces (runways, large lots, flat roofs) can look like water, "
