@@ -1,0 +1,12 @@
+.venv
+__pycache__
+.pytest_cache
+.env
+.env.*
+tests
+**/dswx_wtr
+**/heat_cache
+**/ground_cache
+downloads
+raw_downloads
+**/*.npz
