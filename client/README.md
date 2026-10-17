@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Homefield frontend
 
-## Getting Started
+A responsive Next.js report page for King County satellite hazard observations.
 
-First, run the development server:
+## Run locally
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
+```sh
+pnpm install
+cp .env.example .env.local
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `BACKEND_URL` to your FastAPI service. It must implement `GET /hazards?address=...` using the PRD's report schema. A missing backend displays a friendly service-unavailable message; the app does not generate or substitute hazard observations.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Set `XAI_API_KEY` for the written Grok summary and voice follow-ups. Optionally set `XAI_TEXT_MODEL` to a text model enabled for your account. All credentials remain server-side. Restart the dev server after environment changes.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Data flow
 
-## Learn More
+- `/api/report` proxies the configured backend, validates the location, and normalizes each hazard independently. Missing or malformed layers become card-level errors. An address outside King County stops the flow.
+- `/api/summary` takes the currently displayed report and requests a plain-language summary separately, so summary errors do not hide observations.
+- `/api/voice-token` creates a short-lived xAI token. The browser sends mono PCM16 microphone audio over the realtime WebSocket and answers `get_hazards` calls with the current report. Changing the address or leaving the page stops audio and closes the session.
+- The MapLibre basemap uses CARTO's public style and OpenStreetMap data. A pin shows the geocoded address. There are no hazard raster overlays until data tiles are available.
 
-To learn more about Next.js, take a look at the following resources:
+The frontend needs a running backend and real processed satellite data for live reports. Voice and summary need an enabled xAI account. No accounts or saved reports are implemented.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Check
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sh
+pnpm exec tsc --noEmit
+pnpm build
+node --experimental-strip-types --test tests/report.test.mjs
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy `client/` as the Vercel project root and configure the environment variables above. Deploy the FastAPI backend separately.
