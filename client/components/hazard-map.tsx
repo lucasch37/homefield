@@ -2,18 +2,45 @@
 if (typeof window !== "undefined") {
   (window as Window & { __hazardMap?: boolean }).__hazardMap = true;
 }
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LocateFixed, MapPin, Satellite } from "lucide-react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import type { Report } from "@/lib/types";
 
+const COUNTY_CENTER: [number, number] = [-121.95, 47.48];
+const COUNTY_ZOOM = 8.3;
+const INTRO_ZOOM = 5.3;
+const INTRO_SECONDS = 2.2;
+
+const GLASS =
+  "border border-white/10 bg-[#0d0b24]/70 text-[#eef1ff] shadow-[0_8px_24px_-12px_rgba(0,0,0,.8)] backdrop-blur-md";
+
 export function HazardMap({
   report,
   loading,
+  variant = "card",
+  intro = false,
+  replayIntro = 0,
+  resetView = 0,
+  chromeIn = true,
 }: {
   report: Report | null;
   loading: boolean;
+  variant?: "hero" | "card";
+  intro?: boolean;
+  replayIntro?: number;
+  resetView?: number;
+  chromeIn?: boolean;
 }) {
+  const hero = variant === "hero";
+  const introPending = useRef(intro);
+  const handledReplay = useRef(replayIntro);
+  // A layout effect, so a replay requested on arrival is pending before the map is created.
+  useLayoutEffect(() => {
+    if (replayIntro === handledReplay.current) return;
+    handledReplay.current = replayIntro;
+    introPending.current = true;
+  }, [replayIntro]);
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const marker = useRef<MapLibreMarker | null>(null);
@@ -80,10 +107,11 @@ export function HazardMap({
                   },
                 },
               ],
+              ...(introPending.current && { projection: { type: "globe" } }),
             },
 
-            center: [-121.95, 47.48],
-            zoom: 8.3,
+            center: COUNTY_CENTER,
+            zoom: introPending.current ? INTRO_ZOOM : COUNTY_ZOOM,
             attributionControl: { compact: true },
           });
           map.current = instance;
@@ -254,22 +282,36 @@ export function HazardMap({
       marker.current?.remove();
       map.current?.remove();
       map.current = null;
+      // cacheComponents hides this page instead of unmounting it, and the map is rebuilt when
+      // the page is shown again, so everything keyed on `ready` must wait for the new map.
+      setReady(false);
     };
   }, []);
   useEffect(() => {
-    if (!ready || !map.current) return;
+    const instance = map.current;
+    if (!ready || !instance) return;
     let active = true;
+    const introFlight = introPending.current;
+    introPending.current = false;
+    const flyTo = (center: [number, number], zoom: number) => {
+      if (introFlight) {
+        instance.setProjection({ type: "globe" });
+        instance.jumpTo({ center: COUNTY_CENTER, zoom: INTRO_ZOOM });
+      }
+      instance.flyTo({
+        center,
+        zoom,
+        essential: true,
+        ...(introFlight && { duration: INTRO_SECONDS * 1000, curve: 1.2 }),
+      });
+    };
     marker.current?.remove();
     if (!report) {
-      map.current.flyTo({
-        center: [-121.95, 47.48],
-        zoom: 8.3,
-        essential: true,
-      });
+      flyTo(COUNTY_CENTER, COUNTY_ZOOM);
       return;
     }
     import("maplibre-gl").then((maplibre) => {
-      if (!active || !map.current) return;
+      if (!active) return;
       const pin = document.createElement("div");
       pin.className =
         "size-[22px] rounded-full border-4 border-white bg-[var(--brand-accent)] shadow-[0_0_0_12px_color-mix(in_srgb,var(--brand-accent),transparent_82%),0_2px_10px_#0004]";
@@ -277,17 +319,13 @@ export function HazardMap({
       pin.setAttribute("role", "img");
       marker.current = new maplibre.Marker({ element: pin })
         .setLngLat([report.lon, report.lat])
-        .addTo(map.current);
-      map.current.flyTo({
-        center: [report.lon, report.lat],
-        zoom: 14,
-        essential: true,
-      });
+        .addTo(instance);
+      flyTo([report.lon, report.lat], 14);
     });
     return () => {
       active = false;
     };
-  }, [report, ready]);
+  }, [report, ready, replayIntro, resetView]);
   useEffect(() => {
     if (!ready || !map.current) return;
     const layers = ["flood", "heat", "ground_motion"] as const;
@@ -346,65 +384,74 @@ export function HazardMap({
         : [],
     });
   }, [report, ready]);
+  const fadeIn = chromeIn
+    ? "opacity-100 transition-opacity duration-500"
+    : "pointer-events-none opacity-0";
   return (
     <section
-      className="relative h-[clamp(430px,55vw,640px)] overflow-hidden rounded-[16px] bg-secondary shadow-[0_22px_55px_-38px_#002f28] max-[760px]:h-[370px] [&_.maplibregl-ctrl-top-right]:!top-[14px] [&_.maplibregl-ctrl-top-right]:!right-[10px] [&_.maplibregl-ctrl-group]:!rounded-[5px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-border [&_.maplibregl-ctrl-group]:!shadow-[0_1px_8px_#001f1a66]"
+      className={
+        hero
+          ? "relative h-[calc(100svh-94px)] min-h-[520px] overflow-hidden bg-[#05060f] max-[760px]:h-[calc(100svh-77px)] [&_.maplibregl-ctrl-top-right]:!top-auto [&_.maplibregl-ctrl-top-right]:!bottom-[150px] [&_.maplibregl-ctrl-top-right]:!right-[10px] max-[760px]:[&_.maplibregl-ctrl-top-right]:!bottom-[190px] [&_.maplibregl-ctrl-group]:!rounded-[8px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-white/10 [&_.maplibregl-ctrl-group]:!bg-[#0d0b24]/80 [&_.maplibregl-ctrl-group_button_span]:invert"
+          : "relative h-[clamp(430px,55vw,640px)] overflow-hidden rounded-[16px] bg-[#05060f] shadow-[0_22px_55px_-38px_#000] max-[760px]:h-[370px] [&_.maplibregl-ctrl-top-right]:!top-[14px] [&_.maplibregl-ctrl-top-right]:!right-[10px] [&_.maplibregl-ctrl-group]:!rounded-[5px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-white/10 [&_.maplibregl-ctrl-group]:!shadow-[0_1px_8px_#0006]"
+      }
       aria-label="Map of the selected address"
     >
       <div ref={container} className="absolute inset-0 h-full w-full" />
-      <div className="absolute top-5 left-[18px] flex items-center gap-[7px] rounded bg-card/95 px-3 py-2.5 text-[8px] font-semibold tracking-[1.2px] text-card-foreground">
-        <span className="size-[5px] rounded-full bg-primary" /> KING COUNTY,
-        WASHINGTON
-      </div>
       <div
-        className="absolute top-[58px] left-[18px] flex gap-1 rounded-md bg-card/95 p-1 shadow-[0_2px_8px_#001f1a33]"
-        aria-label="Hazard map layers"
+        className={`absolute left-[18px] flex flex-col items-start gap-2 ${hero ? "bottom-[112px] max-[760px]:bottom-[150px]" : "top-5"} ${fadeIn}`}
       >
-        {(["flood", "heat", "ground_motion"] as const).map((layer) => (
-          <button
-            key={layer}
-            className={`rounded px-2 py-1.5 text-[8px] font-medium transition-colors ${activeLayer === layer ? "bg-primary text-primary-foreground" : "text-card-foreground hover:bg-muted"}`}
-            type="button"
-            onClick={() => setActiveLayer(layer)}
-          >
-            {layer === "ground_motion"
-              ? "Movement"
-              : layer === "flood"
-                ? "Flood"
-                : "Heat"}
-          </button>
-        ))}
-      </div>
-      <div
-        className="absolute top-[83px] left-7 text-center text-[9px] text-foreground"
-        aria-hidden="true"
-      >
-        N<span className="block text-[28px] leading-[1.1]">↑</span>
+        <div
+          className={`flex items-center gap-[7px] rounded-md px-3 py-2.5 text-[8px] font-semibold tracking-[1.2px] ${GLASS}`}
+        >
+          <span className="size-[5px] rounded-full bg-primary" /> KING COUNTY,
+          WASHINGTON
+        </div>
+        <div
+          className={`flex gap-1 rounded-md p-1 ${GLASS}`}
+          aria-label="Hazard map layers"
+        >
+          {(["flood", "heat", "ground_motion"] as const).map((layer) => (
+            <button
+              key={layer}
+              className={`rounded px-2 py-1.5 text-[8px] font-medium transition-colors ${activeLayer === layer ? "bg-primary text-primary-foreground" : "hover:bg-white/10"}`}
+              type="button"
+              onClick={() => setActiveLayer(layer)}
+            >
+              {layer === "ground_motion"
+                ? "Movement"
+                : layer === "flood"
+                  ? "Flood"
+                  : "Heat"}
+            </button>
+          ))}
+        </div>
       </div>
       {error && (
         <div
-          className="absolute inset-x-[18px] top-[42%] rounded-[5px] bg-card/95 p-[15px] text-center text-xs text-card-foreground"
+          className={`absolute inset-x-[18px] top-[42%] rounded-md p-[15px] text-center text-xs ${GLASS}`}
           role="status"
         >
           The map couldn’t load. You can still read the report.
         </div>
       )}
       <button
-        className="absolute top-[99px] right-5 grid size-8 place-items-center rounded-[5px] bg-card text-foreground disabled:cursor-not-allowed"
+        className={`absolute right-[10px] grid size-[29px] place-items-center rounded-[8px] disabled:cursor-not-allowed ${hero ? "bottom-[112px] max-[760px]:bottom-[150px]" : "top-[99px]"} ${GLASS} ${fadeIn}`}
         type="button"
         aria-label="Recenter map"
         disabled={!ready}
         onClick={() =>
           map.current?.flyTo({
-            center: report ? [report.lon, report.lat] : [-121.95, 47.48],
-            zoom: report ? 14 : 8.3,
+            center: report ? [report.lon, report.lat] : COUNTY_CENTER,
+            zoom: report ? 14 : COUNTY_ZOOM,
             essential: true,
           })
         }
       >
-        <LocateFixed size={18} />
+        <LocateFixed size={16} />
       </button>
-      <div className="pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-md bg-card/95 px-[17px] py-[19px] text-card-foreground shadow-[0_3px_18px_#001f1a44] max-[760px]:right-[13px] max-[760px]:bottom-[58px] max-[760px]:left-[13px] max-[760px]:p-3.5">
+      <div
+        className={`pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-xl px-[17px] py-[19px] max-[760px]:right-[13px] max-[760px]:bottom-[58px] max-[760px]:left-[13px] max-[760px]:p-3.5 ${GLASS} ${fadeIn}`}
+      >
         <div className="grid size-[38px] shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
           {report ? <MapPin size={20} /> : <Satellite size={21} />}
         </div>
@@ -416,7 +463,7 @@ export function HazardMap({
                 ? report.address
                 : "A closer look at the place you call home."}
           </strong>
-          <p className="mt-[5px] text-[10px] leading-[1.5] text-[#c1d3ce] max-[760px]:text-[9px]">
+          <p className="mt-[5px] text-[10px] leading-[1.5] text-[#9aa3c7] max-[760px]:text-[9px]">
             {report
               ? `${report.lat.toFixed(5)}° N · ${Math.abs(report.lon).toFixed(5)}° W`
               : "Start with an address. See what satellites observed."}

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useDive } from "./dive-context";
 import { CENTER_Y_LANDSCAPE, CENTER_Y_PORTRAIT, FILL_HEIGHT, FILL_WIDTH } from "./earth-layout";
 import { usePrefersReducedMotion } from "./use-reduced-motion";
 
@@ -13,8 +14,22 @@ export default function EarthHero({ className }: { className?: string }) {
   const wrapper = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
   const [ready, setReady] = useState(false);
+  const [dipped, setDipped] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
-  const onReady = useCallback(() => setReady(true), []);
+  const { diving, setSceneReady, finishDive } = useDive();
+  const onReady = useCallback(() => {
+    setReady(true);
+    setSceneReady(true);
+  }, [setSceneReady]);
+  const onDip = useCallback(() => setDipped(true), []);
+  useEffect(() => () => setDipped(false), []);
+
+  useEffect(() => {
+    const el = wrapper.current;
+    if (!diving || !el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.top < 0 || rect.bottom > window.innerHeight) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [diving]);
 
   useEffect(() => {
     const el = wrapper.current;
@@ -51,8 +66,21 @@ export default function EarthHero({ className }: { className?: string }) {
         <Image src="/earth.png" alt="" fill priority sizes="900px" className="object-cover" />
       </div>
       <div className={cn("absolute inset-0 transition-opacity duration-1000", ready ? "opacity-100" : "opacity-0")}>
-        <EarthScene animate={visible && !reducedMotion} onReady={onReady} />
+        <EarthScene
+          animate={visible && !reducedMotion}
+          onReady={onReady}
+          diving={diving}
+          onDip={onDip}
+          onDiveEnd={finishDive}
+        />
       </div>
+      <div
+        className={cn(
+          "pointer-events-none fixed inset-0 z-50 bg-black transition-opacity duration-[250ms] ease-in",
+          dipped ? "opacity-100" : "opacity-0",
+        )}
+        aria-hidden="true"
+      />
     </div>
   );
 }
