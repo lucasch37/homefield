@@ -1,5 +1,7 @@
 "use client";
 import { fetchJSON } from "@/lib/api";
+import { buildFacts } from "@/lib/facts";
+import { saveReport } from "@/lib/saved-reports";
 import { DEMO_PLACES, parseSearch, reportUrl } from "@/lib/search";
 import { normalizeReport, type Report } from "@/lib/types";
 import { MapPin } from "lucide-react";
@@ -11,6 +13,13 @@ import { ReportSummary } from "./report-summary";
 import { VoiceControls } from "./voice-controls";
 
 type Summary = { summary: string; source?: "gemini" | "data"; note?: string };
+
+function shortSummary(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= 320) return trimmed;
+  const sentenceEnd = trimmed.slice(0, 320).lastIndexOf(". ");
+  return sentenceEnd > 80 ? trimmed.slice(0, sentenceEnd + 1) : `${trimmed.slice(0, 317).trimEnd()}…`;
+}
 
 export default function ReportExplorer() {
   const [report, setReport] = useState<Report | null>(null);
@@ -24,6 +33,12 @@ export default function ReportExplorer() {
   const [placeName, setPlaceName] = useState<string | undefined>();
 
   useEffect(() => () => request.current?.abort(), []);
+
+  useEffect(() => {
+    const address = new URLSearchParams(window.location.search).get("address");
+    if (address) void search(address);
+    // Run once for a saved report link; later lookups come from the search form.
+  }, []);
 
   async function search(text: string) {
     const query = parseSearch(text);
@@ -62,6 +77,12 @@ export default function ReportExplorer() {
         return;
       }
       setReport(result);
+      const facts = buildFacts(result);
+      const label = result.address || text.trim();
+      const savedAt = new Date().toISOString();
+      const fallback = facts.hazards.find((hazard) => hazard.key === facts.lead)?.finding
+        || "Satellite observations are available for this location.";
+      saveReport({ address: label, query: text.trim(), summary: shortSummary(fallback), savedAt });
       setLoading(false);
       setSummaryLoading(true);
       try {
@@ -71,7 +92,10 @@ export default function ReportExplorer() {
           body: JSON.stringify(result),
           signal: controller.signal,
         });
-        if (!controller.signal.aborted) setSummary(written);
+        if (!controller.signal.aborted) {
+          setSummary(written);
+          saveReport({ address: label, query: text.trim(), summary: shortSummary(written.summary), savedAt });
+        }
       } catch (err) {
         if (!controller.signal.aborted)
           setSummaryError(
