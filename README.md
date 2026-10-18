@@ -1,4 +1,6 @@
-# Home Hazard Report
+# homefield
+
+![Snoqualmie flood, December 2025](client/public/data-figures/flood_snoqualmie_dec2025.png)
 
 King County home hazard reports from prepared satellite observations.
 
@@ -56,6 +58,6 @@ cd client && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm test
 
 ## Deploy
 
-- **API:** build `server/Dockerfile` (it includes `server/data/`) on Render, Railway, or similar. Set `CORS_ORIGINS` to the site's origin.
+- **API:** build `server/` (it includes `server/data/`) on Render, Railway, or similar. Set `CORS_ORIGINS` to the site's origin.
 - **Web:** deploy `client/` on Vercel with `BACKEND_URL` (the API's public URL), `GEMINI_API_KEY`, and `XAI_API_KEY`.
 - **Domain:** point homefield.casa at the Vercel project.

@@ -334,7 +334,7 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
               cy="90"
               r="67"
               fill="none"
-              stroke={tone.dark}
+              stroke={"#ffffff1c"}
               strokeWidth="10"
             />
             <circle

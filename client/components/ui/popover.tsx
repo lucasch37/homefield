@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, {
   createContext,
@@ -7,78 +7,87 @@ import React, {
   useId,
   useRef,
   useState,
-} from "react"
-import { X } from "lucide-react"
-import { AnimatePresence, motion, MotionConfig, useReducedMotion } from "motion/react"
+} from "react";
+import { X } from "lucide-react";
+import {
+  AnimatePresence,
+  motion,
+  MotionConfig,
+  useReducedMotion,
+} from "motion/react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 const TRANSITION = {
   type: "spring" as const,
   bounce: 0.05,
   duration: 0.3,
-}
+};
 
 function useClickOutside(
   ref: React.RefObject<HTMLElement | null>,
-  handler: () => void
+  handler: () => void,
 ) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (ref.current && !ref.current.contains(event.target as Node)) {
-        handler()
+        handler();
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [ref, handler])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [ref, handler]);
 }
 
 interface PopoverContextType {
-  isOpen: boolean
-  openPopover: () => void
-  closePopover: () => void
-  uniqueId: string
-  sharedLayout: boolean
-  note: string
-  setNote: (note: string) => void
+  isOpen: boolean;
+  openPopover: () => void;
+  closePopover: () => void;
+  uniqueId: string;
+  sharedLayout: boolean;
+  note: string;
+  setNote: (note: string) => void;
 }
 
-const PopoverContext = createContext<PopoverContextType | undefined>(undefined)
+const PopoverContext = createContext<PopoverContextType | undefined>(undefined);
 
 function usePopover() {
-  const context = useContext(PopoverContext)
+  const context = useContext(PopoverContext);
   if (!context) {
-    throw new Error("usePopover must be used within a PopoverProvider")
+    throw new Error("usePopover must be used within a PopoverProvider");
   }
-  return context
+  return context;
 }
 
 function usePopoverLogic() {
-  const uniqueId = useId()
-  const [isOpen, setIsOpen] = useState(false)
-  const [note, setNote] = useState("")
+  const uniqueId = useId();
+  const [isOpen, setIsOpen] = useState(false);
+  const [note, setNote] = useState("");
 
-  const openPopover = () => setIsOpen(true)
+  const openPopover = () => setIsOpen(true);
   const closePopover = () => {
-    setIsOpen(false)
-    setNote("")
-  }
+    setIsOpen(false);
+    setNote("");
+  };
 
-  return { isOpen, openPopover, closePopover, uniqueId, note, setNote }
+  return { isOpen, openPopover, closePopover, uniqueId, note, setNote };
 }
 
 interface PopoverRootProps {
-  children: React.ReactNode
-  className?: string
-  sharedLayout?: boolean
+  children: React.ReactNode;
+  className?: string;
+  sharedLayout?: boolean;
 }
 
-export function PopoverRoot({ children, className, sharedLayout = true }: PopoverRootProps) {
-  const popoverLogic = usePopoverLogic()
+export function PopoverRoot({
+  children,
+  className,
+  sharedLayout = true,
+}: PopoverRootProps) {
+  const popoverLogic = usePopoverLogic();
 
   return (
     <PopoverContext.Provider value={{ ...popoverLogic, sharedLayout }}>
@@ -86,23 +95,23 @@ export function PopoverRoot({ children, className, sharedLayout = true }: Popove
         <div
           className={cn(
             "relative isolate flex items-center justify-center",
-            className
+            className,
           )}
         >
           {children}
         </div>
       </MotionConfig>
     </PopoverContext.Provider>
-  )
+  );
 }
 
 interface PopoverTriggerProps {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }
 
 export function PopoverTrigger({ children, className }: PopoverTriggerProps) {
-  const { isOpen, openPopover, uniqueId, sharedLayout } = usePopover()
+  const { isOpen, openPopover, uniqueId, sharedLayout } = usePopover();
 
   return (
     <motion.button
@@ -112,46 +121,49 @@ export function PopoverTrigger({ children, className }: PopoverTriggerProps) {
       aria-expanded={isOpen}
       className={cn(
         "flex h-9 items-center border border-zinc-950/10 bg-white px-3 text-zinc-950 dark:border-zinc-50/10 dark:bg-zinc-700 dark:text-zinc-50",
-        className
+        className,
       )}
       style={{
         borderRadius: 8,
       }}
       onClick={openPopover}
     >
-      <motion.span layoutId={sharedLayout ? `popover-label-${uniqueId}` : undefined} className="text-sm">
+      <motion.span
+        layoutId={sharedLayout ? `popover-label-${uniqueId}` : undefined}
+        className="text-sm"
+      >
         {children}
       </motion.span>
     </motion.button>
-  )
+  );
 }
 
 interface PopoverContentProps {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }
 
 export function PopoverContent({ children, className }: PopoverContentProps) {
-  const { isOpen, closePopover, uniqueId, sharedLayout } = usePopover()
-  const reduceMotion = useReducedMotion()
-  const formContainerRef = useRef<HTMLDivElement>(null)
-  const animateContent = !sharedLayout && !reduceMotion
+  const { isOpen, closePopover, uniqueId, sharedLayout } = usePopover();
+  const reduceMotion = useReducedMotion();
+  const formContainerRef = useRef<HTMLDivElement>(null);
+  const animateContent = !sharedLayout && !reduceMotion;
 
-  useClickOutside(formContainerRef, closePopover)
+  useClickOutside(formContainerRef, closePopover);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        closePopover()
+        closePopover();
       }
-    }
+    };
 
-    document.addEventListener("keydown", handleKeyDown)
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [closePopover])
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [closePopover]);
 
   return (
     <AnimatePresence>
@@ -159,13 +171,19 @@ export function PopoverContent({ children, className }: PopoverContentProps) {
         <motion.div
           ref={formContainerRef}
           layoutId={sharedLayout ? `popover-${uniqueId}` : undefined}
-          initial={animateContent ? { opacity: 0, scale: 0.92, y: -8 } : undefined}
+          initial={
+            animateContent ? { opacity: 0, scale: 0.92, y: -8 } : undefined
+          }
           animate={animateContent ? { opacity: 1, scale: 1, y: 0 } : undefined}
           exit={animateContent ? { opacity: 0, scale: 0.96, y: -5 } : undefined}
-          transition={animateContent ? { type: "spring", stiffness: 420, damping: 30, mass: 0.8 } : undefined}
+          transition={
+            animateContent
+              ? { type: "spring", stiffness: 420, damping: 30, mass: 0.8 }
+              : undefined
+          }
           className={cn(
-            "absolute z-50 h-[200px] w-[364px] overflow-hidden border border-zinc-950/10 bg-white outline-none dark:bg-zinc-700", // Changed z-90 to z-50
-            className
+            "absolute z-[999999] h-[200px] w-[364px] overflow-hidden border border-zinc-950/10 bg-white outline-none dark:bg-zinc-700", // Changed z-90 to z-50
+            className,
           )}
           style={{
             borderRadius: 12,
@@ -179,13 +197,13 @@ export function PopoverContent({ children, className }: PopoverContentProps) {
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }
 
 interface PopoverFormProps {
-  children: React.ReactNode
-  onSubmit?: (note: string) => void
-  className?: string
+  children: React.ReactNode;
+  onSubmit?: (note: string) => void;
+  className?: string;
 }
 
 export function PopoverForm({
@@ -193,13 +211,13 @@ export function PopoverForm({
   onSubmit,
   className,
 }: PopoverFormProps) {
-  const { note, closePopover } = usePopover()
+  const { note, closePopover } = usePopover();
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit?.(note)
-    closePopover()
-  }
+    e.preventDefault();
+    onSubmit?.(note);
+    closePopover();
+  };
 
   return (
     <form
@@ -208,16 +226,16 @@ export function PopoverForm({
     >
       {children}
     </form>
-  )
+  );
 }
 
 interface PopoverLabelProps {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }
 
 export function PopoverLabel({ children, className }: PopoverLabelProps) {
-  const { uniqueId, note } = usePopover()
+  const { uniqueId, note } = usePopover();
 
   return (
     <motion.span
@@ -228,37 +246,37 @@ export function PopoverLabel({ children, className }: PopoverLabelProps) {
       }}
       className={cn(
         "absolute top-3 left-4 text-sm text-zinc-500 select-none dark:text-zinc-400",
-        className
+        className,
       )}
     >
       {children}
     </motion.span>
-  )
+  );
 }
 
 interface PopoverTextareaProps {
-  className?: string
+  className?: string;
 }
 
 export function PopoverTextarea({ className }: PopoverTextareaProps) {
-  const { note, setNote } = usePopover()
+  const { note, setNote } = usePopover();
 
   return (
     <textarea
       className={cn(
         "h-full w-full resize-none rounded-md bg-transparent px-4 py-3 text-sm outline-none",
-        className
+        className,
       )}
       autoFocus
       value={note}
       onChange={(e) => setNote(e.target.value)}
     />
-  )
+  );
 }
 
 interface PopoverFooterProps {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }
 
 export function PopoverFooter({ children, className }: PopoverFooterProps) {
@@ -269,15 +287,15 @@ export function PopoverFooter({ children, className }: PopoverFooterProps) {
     >
       {children}
     </div>
-  )
+  );
 }
 
 interface PopoverCloseButtonProps {
-  className?: string
+  className?: string;
 }
 
 export function PopoverCloseButton({ className }: PopoverCloseButtonProps) {
-  const { closePopover } = usePopover()
+  const { closePopover } = usePopover();
 
   return (
     <button
@@ -288,11 +306,11 @@ export function PopoverCloseButton({ className }: PopoverCloseButtonProps) {
     >
       <X size={16} className="text-zinc-900 dark:text-zinc-100" />
     </button>
-  )
+  );
 }
 
 interface PopoverSubmitButtonProps {
-  className?: string
+  className?: string;
 }
 
 export function PopoverSubmitButton({ className }: PopoverSubmitButtonProps) {
@@ -300,43 +318,43 @@ export function PopoverSubmitButton({ className }: PopoverSubmitButtonProps) {
     <button
       className={cn(
         "relative ml-1 flex h-8 shrink-0 scale-100 appearance-none items-center justify-center rounded-lg border border-zinc-950/10 bg-transparent px-2 text-sm text-zinc-500 transition-colors select-none hover:bg-zinc-100 hover:text-zinc-800 focus-visible:ring-2 active:scale-[0.98] dark:border-zinc-50/10 dark:text-zinc-50 dark:hover:bg-zinc-800",
-        className
+        className,
       )}
       type="submit"
       aria-label="Submit note"
     >
       Submit
     </button>
-  )
+  );
 }
 
 export function PopoverHeader({
   children,
   className,
 }: {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <div
       className={cn(
         "px-4 py-2 font-semibold text-zinc-900 dark:text-zinc-100",
-        className
+        className,
       )}
     >
       {children}
     </div>
-  )
+  );
 }
 
 export function PopoverBody({
   children,
   className,
 }: {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }) {
-  return <div className={cn("p-4", className)}>{children}</div>
+  return <div className={cn("p-4", className)}>{children}</div>;
 }
 
 // New component: PopoverButton
@@ -345,19 +363,19 @@ export function PopoverButton({
   onClick,
   className,
 }: {
-  children: React.ReactNode
-  onClick?: () => void
-  className?: string
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
 }) {
   return (
     <button
       className={cn(
         "flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700",
-        className
+        className,
       )}
       onClick={onClick}
     >
       {children}
     </button>
-  )
+  );
 }

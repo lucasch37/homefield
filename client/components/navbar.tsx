@@ -35,7 +35,7 @@ export function Navbar() {
           />
         )}
         <Link
-          className={`inline-flex items-center text-[27px] font-semibold tracking-normal max-[760px]:text-2xl ${isHome ? "text-[#eef1ff]" : ""} ${isSearch ? "relative isolate before:pointer-events-none before:absolute before:inset-[-8px_-22px] before:-z-10 before:rounded-full before:border before:border-violet-300/15 before:bg-[#120b1f]/90 before:shadow-[0_8px_24px_-14px_rgba(0,0,0,.9)] before:content-['']" : ""}`}
+          className={`inline-flex items-center text-[27px] mdLml-0 ml-3 font-semibold tracking-normal max-[760px]:text-2xl ${isHome ? "text-[#eef1ff]" : ""} ${isSearch ? "relative isolate before:pointer-events-none before:absolute before:inset-[-8px_-22px] before:-z-10 before:rounded-full before:border before:border-violet-300/15 before:bg-[#120b1f]/90 before:shadow-[0_8px_24px_-14px_rgba(0,0,0,.9)] before:content-['']" : ""}`}
           href="/"
           aria-label="Homefield home"
         >
