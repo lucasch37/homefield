@@ -12,8 +12,11 @@ export function SiteFooter() {
       <p className="font-serif text-xs italic text-muted-foreground max-[760px]:ml-auto max-[760px]:text-[10px]">
         A closer look. A more informed next step.
       </p>
-      <span className="text-[8px] tracking-[1px] text-muted-foreground max-[760px]:basis-full max-[760px]:text-[7px]">
+      <span className="flex flex-col items-end gap-1 text-[8px] tracking-[1px] text-muted-foreground max-[760px]:basis-full max-[760px]:items-start max-[760px]:text-[7px]">
         MADE FOR OUR NEIGHBORS ↗
+        <span className="tracking-normal normal-case opacity-80">
+          Earth imagery: NASA Blue Marble and Black Marble
+        </span>
       </span>
     </footer>
   );

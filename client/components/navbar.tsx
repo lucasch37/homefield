@@ -34,7 +34,7 @@ export function Navbar() {
             onItemClick={() => {}}
             highlightColor="var(--primary)"
             highlightTextColor="var(--primary-foreground)"
-            barColor="rgba(18, 78, 67, .96)"
+            barColor={isHome ? "rgba(12, 18, 44, .9)" : "rgba(18, 78, 67, .96)"}
             textColor="var(--foreground)"
             size="lg"
             style={{
