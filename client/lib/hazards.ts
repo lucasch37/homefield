@@ -1,6 +1,7 @@
-import { heatLabel } from "./facts.ts";
+import { buildFacts, heatLabel } from "./facts.ts";
 import { formatDate, formatMagnitude, formatNumber, ordinal, yearSpan } from "./format.ts";
-import type { Hazard, HazardKind } from "./types.ts";
+import { hazardSeverity, type Severity } from "./severity.ts";
+import type { Hazard, HazardKind, Report } from "./types.ts";
 
 // Links still need a manual check before the demo (the PRD marks the flood alert link VERIFY).
 export const hazardMeta: Record<HazardKind, { title: string; eyebrow: string; action: string; actionDetail: string; href?: string; linkLabel?: string }> = {
@@ -76,4 +77,15 @@ export function finding(hazard: Hazard, kind: HazardKind): Finding {
         detail: "The sign’s direction hasn’t been verified yet, so this doesn’t say whether the ground is rising or sinking.",
       };
   }
+}
+
+/** The lead finding in a few words, e.g. "Flood history: Water observed", for saved report cards. */
+export function reportHeadline(report: Report): { headline: string; severity: Severity } | null {
+  const lead = buildFacts(report).lead;
+  if (!lead) return null;
+  const hazard = report.hazards[lead];
+  return {
+    headline: `${hazardMeta[lead].title}: ${finding(hazard, lead).label}`,
+    severity: hazardSeverity[lead](hazard),
+  };
 }

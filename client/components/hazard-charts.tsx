@@ -26,6 +26,14 @@ import {
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "./ui/chart";
 import { formatDate, formatNumber, yearSpan } from "@/lib/format";
+import {
+  floodSeverity,
+  groundSeverity,
+  heatSeverity,
+  severityColor,
+  severityPalette,
+  type Severity,
+} from "@/lib/severity";
 import type { Hazard, Report } from "@/lib/types";
 import {
   PopoverBody,
@@ -37,47 +45,11 @@ import {
 } from "./ui/popover";
 import "./hazard-dashboard.css";
 
-const green = "#164e3e";
-const lime = "#c4df85";
+const violet = "#9a86db";
+const lime = "#c4b5fd";
 const finite = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
-type Severity = "good" | "average" | "hazardous" | "critical" | "unknown";
-const severityPalette: Record<Severity, { bright: string; chart: string; dark: string }> = {
-  good: { bright: "#d8f58e", chart: "#5ca87d", dark: "#174d3a" },
-  average: { bright: "#ffe06b", chart: "#c7a846", dark: "#5a4b20" },
-  hazardous: { bright: "#ffc078", chart: "#d77b3e", dark: "#693a23" },
-  critical: { bright: "#ff9b91", chart: "#d96f73", dark: "#842d36" },
-  unknown: { bright: "#c8e6d0", chart: "#668f7b", dark: "#214b3e" },
-};
-const severityColor = (severity: Severity) => severityPalette[severity].bright;
-const floodSeverity = (hazard?: Hazard): Severity => {
-  if (!hazard || ["error", "not_enough_data", "not_available"].includes(hazard.status)) return "unknown";
-  if (hazard.status === "permanent_water") return "critical";
-  if (hazard.status === "no_flooding_seen") return "good";
-  if (!finite(hazard.observed_passes) || !finite(hazard.wet_passes)) return "unknown";
-  const ratio = hazard.wet_passes / hazard.observed_passes;
-  if (ratio < 0.05) return "average";
-  if (ratio < 0.5) return "hazardous";
-  return "critical";
-};
-const heatSeverity = (hazard?: Hazard): Severity => {
-  const percentile = hazard?.lowland_percentile ?? hazard?.county_percentile;
-  if (!finite(percentile) || hazard?.status !== "ok") return "unknown";
-  if (percentile < 50) return "good";
-  if (percentile < 75) return "average";
-  if (percentile < 90) return "hazardous";
-  return "critical";
-};
-const groundSeverity = (hazard?: Hazard): Severity => {
-  const value = hazard?.velocity_mm_per_yr;
-  if (!finite(value) || hazard?.status !== "ok") return "unknown";
-  const magnitude = Math.abs(value);
-  if (magnitude <= 5) return "good";
-  if (magnitude <= 10) return "average";
-  if (magnitude <= 20) return "hazardous";
-  return "critical";
-};
-function SeverityScale() {
+export function SeverityScale() {
   return (
     <div className="hfd-severityScale" aria-label="Hazard severity scale">
       {(["good", "average", "hazardous", "critical"] as const).map((level) => (
@@ -249,7 +221,7 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
           {wetDates ?? "A record of what radar satellites could see here."}
         </p>
         <ChartContainer
-          config={{ passes: { label: "Satellite passes", color: green } }}
+          config={{ passes: { label: "Satellite passes", color: violet } }}
           className="hfd-passChart"
           aria-label={`${passes} valid satellite passes, ${wet} of them wet`}
         >
@@ -273,11 +245,7 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
                 patternUnits="userSpaceOnUse"
                 patternTransform="rotate(35)"
               >
-                <rect
-                  width="5"
-                  height="5"
-                  fill={tone.dark}
-                />
+                <rect width="5" height="5" fill={tone.dark} />
                 <line
                   x1="0"
                   y1="0"
@@ -445,9 +413,7 @@ function HeatGauge({ hazard }: { hazard?: Hazard }) {
                   y1={(124 + Math.sin(angle) * 88).toFixed(3)}
                   x2={(130 + Math.cos(angle) * 109).toFixed(3)}
                   y2={(124 + Math.sin(angle) * 109).toFixed(3)}
-                  stroke={
-                    (i / 24) * 100 < percentile ? tone.bright : tone.dark
-                  }
+                  stroke={(i / 24) * 100 < percentile ? tone.bright : tone.dark}
                   strokeWidth="8"
                   strokeLinecap="round"
                 />
@@ -507,23 +473,51 @@ function GroundMotion({ hazard }: { hazard?: Hazard }) {
               {formatNumber(value)}
               <span>mm / year</span>
             </div>
-            <div className="hfd-groundVisual" role="img" aria-label={`Ground movement magnitude ${Math.abs(value).toFixed(1)} millimeters per year`}>
+            <div
+              className="hfd-groundVisual"
+              role="img"
+              aria-label={`Ground movement magnitude ${Math.abs(value).toFixed(1)} millimeters per year`}
+            >
               <div className="hfd-groundMeter">
-                <span className="hfd-groundMarker" style={{ left: `${Math.min((Math.abs(value) / 20) * 100, 100)}%`, color: severityColor(groundSeverity(hazard)) }}>
+                <span
+                  className="hfd-groundMarker"
+                  style={{
+                    left: `${Math.min((Math.abs(value) / 20) * 100, 100)}%`,
+                    color: severityColor(groundSeverity(hazard)),
+                  }}
+                >
                   <Activity size={20} strokeWidth={2} />
                 </span>
               </div>
-              <div className="hfd-groundScale" aria-hidden="true"><span>0</span><span>5</span><span>10</span><span>20+</span></div>
-              <p className="hfd-groundBand">{groundSeverity(hazard)[0].toUpperCase() + groundSeverity(hazard).slice(1)} measured movement</p>
+              <div className="hfd-groundScale" aria-hidden="true">
+                <span>0</span>
+                <span>5</span>
+                <span>10</span>
+                <span>20+</span>
+              </div>
+              <p className="hfd-groundBand">
+                {groundSeverity(hazard)[0].toUpperCase() +
+                  groundSeverity(hazard).slice(1)}{" "}
+                measured movement
+              </p>
             </div>
             {plotted >= 2 ? (
               <ChartContainer
-                config={{ mm: { label: "Cumulative movement (mm)", color: lime } }}
+                config={{
+                  mm: { label: "Cumulative movement (mm)", color: lime },
+                }}
                 className="hfd-groundChart"
                 aria-label={`Cumulative movement from ${formatDate(series[0].date)} to ${formatDate(series[series.length - 1].date)}`}
               >
-                <LineChart data={series} margin={{ top: 12, right: 8, left: 8, bottom: 0 }}>
-                  <CartesianGrid vertical={false} stroke="#ffffff1c" strokeDasharray="3 4" />
+                <LineChart
+                  data={series}
+                  margin={{ top: 12, right: 8, left: 8, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    vertical={false}
+                    stroke="#ffffff1c"
+                    strokeDasharray="3 4"
+                  />
                   <XAxis
                     dataKey="date"
                     tickLine={false}
@@ -539,9 +533,13 @@ function GroundMotion({ hazard }: { hazard?: Hazard }) {
                     content={
                       <ChartTooltipContent
                         className="hfd-tooltip"
-                        labelFormatter={(_, payload) => formatDate(String(payload?.[0]?.payload?.date ?? ""))}
+                        labelFormatter={(_, payload) =>
+                          formatDate(String(payload?.[0]?.payload?.date ?? ""))
+                        }
                         formatter={(v) => (
-                          <span className="hfd-tooltipValue">{formatNumber(Number(v))} mm</span>
+                          <span className="hfd-tooltipValue">
+                            {formatNumber(Number(v))} mm
+                          </span>
                         )}
                       />
                     }
@@ -551,7 +549,10 @@ function GroundMotion({ hazard }: { hazard?: Hazard }) {
                     dataKey="mm"
                     stroke={severityColor(groundSeverity(hazard))}
                     strokeWidth={2}
-                    dot={{ r: 2.5, fill: severityColor(groundSeverity(hazard)) }}
+                    dot={{
+                      r: 2.5,
+                      fill: severityColor(groundSeverity(hazard)),
+                    }}
                     connectNulls={false}
                     isAnimationActive={false}
                   />
@@ -596,7 +597,8 @@ function HeatHistory({ hazard }: { hazard?: Hazard }) {
   const tone = severityPalette[heatSeverity(hazard)];
   const recent = hazard?.recent_relative_f;
   const change = hazard?.change_since_early_f;
-  const ChangeIcon = finite(change) && change < 0 ? ArrowDownRight : ArrowUpRight;
+  const ChangeIcon =
+    finite(change) && change < 0 ? ArrowDownRight : ArrowUpRight;
   return (
     <>
       <div className="hfd-chartPanel hfd-heatPanel">
@@ -606,12 +608,15 @@ function HeatHistory({ hazard }: { hazard?: Hazard }) {
               <div className="hfd-metric">
                 {recent > 0 ? "+" : ""}
                 {formatNumber(recent)}
-                <span>°F vs. a typical lowland spot ({yearSpan(hazard?.recent_years)})</span>
+                <span>
+                  °F vs. a typical lowland spot (
+                  {yearSpan(hazard?.recent_years)})
+                </span>
               </div>
             )}
             <p className="hfd-caption">
-              Each summer: how much hotter (+) or cooler (−) this spot’s
-              surface ran than a typical lowland King County spot
+              Each summer: how much hotter (+) or cooler (−) this spot’s surface
+              ran than a typical lowland King County spot
             </p>
           </div>
           {finite(change) && hazard?.early_years?.length ? (
@@ -624,12 +629,21 @@ function HeatHistory({ hazard }: { hazard?: Hazard }) {
           ) : null}
         </div>
         <ChartContainer
-          config={{ relative: { label: "Difference from typical (°F)", color: lime } }}
+          config={{
+            relative: { label: "Difference from typical (°F)", color: lime },
+          }}
           className="hfd-comparisonChart"
           aria-label={`Yearly surface heat compared with lowland King County, ${data[0].year} to ${data[data.length - 1].year}`}
         >
-          <BarChart data={data} margin={{ top: 14, right: 6, left: 6, bottom: 0 }}>
-            <CartesianGrid vertical={false} stroke="#ffffff1c" strokeDasharray="3 4" />
+          <BarChart
+            data={data}
+            margin={{ top: 14, right: 6, left: 6, bottom: 0 }}
+          >
+            <CartesianGrid
+              vertical={false}
+              stroke="#ffffff1c"
+              strokeDasharray="3 4"
+            />
             <XAxis
               dataKey="year"
               tickLine={false}
@@ -654,11 +668,19 @@ function HeatHistory({ hazard }: { hazard?: Hazard }) {
                 />
               }
             />
-            <Bar dataKey="relative" radius={[4, 4, 4, 4]} isAnimationActive={false}>
+            <Bar
+              dataKey="relative"
+              radius={[4, 4, 4, 4]}
+              isAnimationActive={false}
+            >
               {data.map((point) => (
                 <Cell
                   key={point.year}
-                  fill={finite(point.relative) && point.relative > 0 ? tone.bright : tone.chart}
+                  fill={
+                    finite(point.relative) && point.relative > 0
+                      ? tone.bright
+                      : tone.chart
+                  }
                 />
               ))}
             </Bar>
@@ -737,9 +759,9 @@ export function HazardDashboard({
         </Card>
       </div>
       <p className="hfd-dashboardNote">
-        <ScanLine size={13} />Every chart shows values from the satellite
-        data as returned for this location. Open “Source” for dates,
-        resolution, and limitations.
+        <ScanLine size={13} />
+        Every chart shows values from the satellite data as returned for this
+        location. Open “Source” for dates, resolution, and limitations.
       </p>
     </section>
   );

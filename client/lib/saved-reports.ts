@@ -1,8 +1,13 @@
+import { isSeverity, type Severity } from "./severity.ts";
+
 export type SavedReport = {
   address: string;
   query: string;
   summary: string;
   savedAt: string;
+  /** The lead finding in a few words; reports saved before this existed don't have one. */
+  headline?: string;
+  severity?: Severity;
 };
 
 const PREFIX = "homefield_report_";
@@ -27,7 +32,14 @@ function parseCookie(value: string): SavedReport | null {
       typeof item.summary !== "string" || !item.summary ||
       typeof item.savedAt !== "string" || Number.isNaN(Date.parse(item.savedAt))
     ) return null;
-    return { address: item.address, query: item.query, summary: item.summary, savedAt: item.savedAt };
+    return {
+      address: item.address,
+      query: item.query,
+      summary: item.summary,
+      savedAt: item.savedAt,
+      ...(typeof item.headline === "string" && item.headline ? { headline: item.headline.slice(0, 120) } : {}),
+      ...(isSeverity(item.severity) ? { severity: item.severity } : {}),
+    };
   } catch {
     return null;
   }

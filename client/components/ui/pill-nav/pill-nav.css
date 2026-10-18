@@ -175,6 +175,27 @@
   color: var(--pn-strong);
 }
 
+.pill-nav[data-items="pill"] .pill-nav__item[aria-current] {
+  background: var(--pn-active-tile, var(--pn-tile));
+  box-shadow: var(--pn-active-rim, var(--pn-tile-rim));
+  color: var(--pn-active-ink, var(--pn-strong));
+}
+
+.pill-nav[data-items="pill"] .pill-nav__item {
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.pill-nav[data-items="pill"] .pill-nav__item:not([aria-current]):hover {
+  background: var(--pn-hover-fill, var(--pn-tile));
+  color: var(--pn-hover-ink, var(--pn-strong));
+}
+
+.pill-nav[data-items="pill"] .pill-nav__item[aria-current]:hover {
+  background: var(--pn-active-hover, var(--pn-active-tile, var(--pn-tile)));
+}
+
 .pill-nav__item:focus-visible,
 .pill-nav__row:focus-visible {
   outline: 2px solid var(--pn-ring);
@@ -441,8 +462,8 @@
 .pill-nav__measure {
   position: absolute;
   top: 0;
-  /* Anchor right so the hidden full-width copy never sticks out past a phone's right edge. */
-  right: 0;
+  /* Extends leftward so the hidden copy never widens the page on narrow screens. */
+  right: 100%;
   display: flex;
   gap: 2px;
   visibility: hidden;

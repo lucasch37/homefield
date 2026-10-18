@@ -44,8 +44,9 @@ test('Carnation leads with the December 10, 2025 water observation', () => {
   assert.match(facts.hazards[0].line, /1 of 281 passes, on December 10, 2025/);
   const summary = templateSummary(facts);
   assert.match(summary, /^Satellite radar saw water at this spot on 1 of 281 passes, on December 10, 2025\./);
-  assert.match(summary, /could not get enough reliable readings here to measure slow ground movement/);
-  assert.match(summary, /next step: sign up for King County flood alerts\.$/);
+  assert.match(summary, /matters most for basements, crawl spaces, ground-floor rooms, and yards/);
+  assert.match(summary, /couldn’t measure ground movement here/);
+  assert.match(summary, /Before deciding, ask the seller or landlord about past water, look for water stains, and sign up for flood alerts\.$/);
   assert.equal(finding(load('carnation').hazards.flood, 'flood').detail, 'Water seen on December 10, 2025');
 });
 
@@ -55,7 +56,9 @@ test('lake water, hot pavement and missing readings are described, never called 
   assert.ok(lake.hazards[1].unknown, 'water has no heat reading');
   const sodo = buildFacts(load('sodo'));
   assert.equal(sodo.lead, 'heat');
-  assert.match(templateSummary(sodo), /105\.8°F.*17\.5°F hotter.*98th percentile/);
+  assert.match(templateSummary(sodo), /^On clear .*105\.8°F\. Surfaces here run hotter than almost anywhere in lowland King County, which can mean hotter rooms/);
+  assert.match(templateSummary(sodo), /No flooding showed up in the satellite record/);
+  assert.match(templateSummary(sodo), /Before deciding, ask about air conditioning, insulation, and shade trees\.$/);
   for (const name of inside) assert.doesNotMatch(templateSummary(buildFacts(load(name))), /\bsafe/i);
   const seattle = templateSummary(buildFacts(load('seattle_center')));
   assert.match(seattle, /No flooding was observed at this spot in 196 satellite radar passes.*does not mean the home cannot flood/);

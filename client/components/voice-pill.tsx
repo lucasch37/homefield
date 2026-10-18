@@ -28,6 +28,7 @@ type StopReason = "tap" | "release" | "key" | "escape" | "blur" | "cancel";
 
 type VoicePillProps = {
   active: boolean;
+  loading?: boolean;
   disabled?: boolean;
   accentColor?: string;
   iconColor?: string;
@@ -61,6 +62,7 @@ function clock(milliseconds: number) {
 
 export default function VoicePill({
   active,
+  loading = false,
   disabled = false,
   accentColor = "#f5f5f5",
   iconColor = "#a1a1aa",
@@ -246,10 +248,11 @@ export default function VoicePill({
       ref={rootRef}
       type="button"
       disabled={disabled}
-      aria-label={active ? "Stop voice conversation" : ariaLabel}
+      aria-label={loading ? "Connecting to voice" : active ? "Stop voice conversation" : ariaLabel}
+      aria-busy={loading}
       aria-pressed={active}
       className="voice-pill"
-      data-state={active ? "listening" : "idle"}
+      data-state={loading ? "loading" : active ? "listening" : "idle"}
       data-pressed={pressed ? "" : undefined}
       data-input={input}
       onPointerDown={pointerDown}
@@ -278,6 +281,7 @@ export default function VoicePill({
       </span>
       <span ref={timeRef} className="voice-pill__time" aria-hidden="true">0:00</span>
       <span className="voice-pill__glyph" aria-hidden="true">
+        <span className="voice-pill__loading" />
         <span className="voice-pill__mic">
           <HugeiconsIcon icon={Mic01Icon} size={Math.round(size * 0.54)} strokeWidth={2} />
         </span>

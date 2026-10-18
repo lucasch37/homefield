@@ -31,6 +31,13 @@ test('successful searches are kept in cookies, refreshed by address, and bounded
     assert.equal(readSavedReports().length, 20);
     assert.equal(readSavedReports()[0].summary, 'Updated observation.');
     assert.deepEqual(readSavedReports('homefield_report_broken=not-json'), []);
+
+    saveReport({ ...entry(22), headline: 'Flood history: Water observed', severity: 'average' });
+    assert.equal(readSavedReports()[0].headline, 'Flood history: Water observed');
+    assert.equal(readSavedReports()[0].severity, 'average');
+    assert.equal(readSavedReports().find((report) => report.address === '21 Main St').headline, undefined);
+    const odd = encodeURIComponent(JSON.stringify({ ...entry(23), severity: 'purple' }));
+    assert.equal(readSavedReports(`homefield_report_x=${odd}`)[0].severity, undefined);
   } finally {
     globalThis.document = previousDocument;
     globalThis.location = previousLocation;

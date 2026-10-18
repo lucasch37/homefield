@@ -28,6 +28,7 @@
 
 .voice-pill::before { content: ""; position: absolute; inset: calc(-1 * var(--vp-hit)); }
 .voice-pill[data-state="listening"] { z-index: 1; color: var(--vp-accent); }
+.voice-pill[data-state="loading"] { z-index: 1; color: var(--vp-accent); }
 .voice-pill[data-pressed] { transform: scale(.95); }
 .voice-pill:focus-visible { outline: 2px solid #f6f6f6; outline-offset: 4px; }
 .voice-pill:disabled { cursor: default; opacity: .5; pointer-events: none; }
@@ -123,6 +124,23 @@
 }
 
 .voice-pill__mic { display: inline-flex; }
+.voice-pill__loading {
+  width: calc(var(--vp-size) * .36);
+  height: calc(var(--vp-size) * .36);
+  border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
+  border-radius: 999px;
+  opacity: 0;
+  transform: scale(.7);
+}
+.voice-pill[data-state="loading"] .voice-pill__loading {
+  opacity: 1;
+  transform: scale(1);
+  animation: voice-pill-spin .8s linear infinite;
+  will-change: transform;
+}
+.voice-pill[data-state="loading"] .voice-pill__mic,
+.voice-pill[data-state="loading"] .voice-pill__stop { opacity: 0; }
 .voice-pill__stop { width: var(--vp-stop); height: var(--vp-stop); border-radius: 22%; background: currentColor; opacity: 0; filter: blur(2px); transform: scale(.6); }
 .voice-pill[data-state="listening"] .voice-pill__mic { opacity: 0; filter: blur(2px); transform: scale(.7); }
 .voice-pill[data-state="listening"] .voice-pill__stop { opacity: 1; filter: blur(0); transform: scale(1); }
@@ -135,4 +153,9 @@
   .voice-pill__capsule { transition: background-color 150ms ease; }
   .voice-pill__glyph > * { filter: none !important; transform: none !important; transition: opacity 200ms ease; }
   .voice-pill__time, .voice-pill__wave, .voice-pill__glyph { filter: none !important; transition-property: opacity; }
+}
+
+@keyframes voice-pill-spin {
+  from { transform: rotate(0deg) scale(1); }
+  to { transform: rotate(360deg) scale(1); }
 }
