@@ -1,7 +1,7 @@
+import { findGeminiModel, geminiApiKey, geminiBaseUrl, geminiModel } from "@/lib/gemini";
 import { writeSummary } from "@/lib/summary";
 import { normalizeReport } from "@/lib/types";
-import { isSameOrigin, listModels, xaiApiKey, xaiBaseUrl, xaiTextModel } from "@/lib/xai";
-import { pickTextModel } from "@/lib/xai-shared";
+import { isSameOrigin } from "@/lib/xai";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return Response.json({ error: "Forbidden" }, { status: 403 });
@@ -17,12 +17,12 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const apiKey = xaiApiKey();
+  const apiKey = geminiApiKey();
   const result = await writeSummary(report, {
     apiKey,
-    baseUrl: xaiBaseUrl(),
-    model: xaiTextModel(),
-    findModel: async () => apiKey ? pickTextModel((await listModels(apiKey)).filter((id) => id !== xaiTextModel())) : undefined,
+    baseUrl: geminiBaseUrl(),
+    model: geminiModel(),
+    findModel: async () => (apiKey ? findGeminiModel(apiKey) : undefined),
     log: (message) => console.warn(`[api/summary] ${message}`),
   });
   return Response.json(result, { headers: { "Cache-Control": "no-store" } });

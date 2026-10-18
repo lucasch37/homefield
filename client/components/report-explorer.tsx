@@ -11,7 +11,7 @@ import { HazardMap } from "./hazard-map";
 import { ReportSummary } from "./report-summary";
 import { VoiceControls } from "./voice-controls";
 
-type Summary = { summary: string; source?: "grok" | "data"; note?: string };
+type Summary = { summary: string; source?: "gemini" | "data"; note?: string };
 
 export default function ReportExplorer() {
   const [report, setReport] = useState<Report | null>(null);

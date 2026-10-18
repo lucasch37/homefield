@@ -3,85 +3,100 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { writeSummary } from '../lib/summary.ts';
 import { normalizeReport } from '../lib/types.ts';
+import { classifyGeminiStatus, geminiText, pickGeminiModel } from '../lib/gemini-shared.ts';
 import { classifyXaiStatus, pickTextModel, tokenValue } from '../lib/xai-shared.ts';
 
 const report = normalizeReport(JSON.parse(readFileSync(new URL('./fixtures/carnation.json', import.meta.url), 'utf8')));
-const options = { apiKey: 'test-key', baseUrl: 'https://xai.test/v1', model: 'test-model' };
+const options = { apiKey: 'test-key', baseUrl: 'https://gemini.test/v1beta', model: 'gemini-flash-latest' };
 const GOOD = 'Satellite radar saw water here on 1 of 281 passes, on December 10, 2025. The ground and roofs averaged 84.7°F on clear summer days. The ground movement data could not tell us anything here. Sign up for King County flood alerts.';
 
-// Stands in for xAI's chat completions endpoint; no network calls are made. Each call takes the next reply.
-function mockXai(...replies) {
+// Stands in for Gemini's generateContent endpoint; no network calls are made. Each call takes the next reply.
+function mockGemini(...replies) {
   const calls = [];
   const fetch = async (url, init) => {
     calls.push({ url, init, body: JSON.parse(init.body) });
     const reply = replies[Math.min(calls.length - 1, replies.length - 1)];
     if (typeof reply === 'object') return new Response(reply.body ?? '{}', { status: reply.status });
-    return new Response(JSON.stringify({ choices: [{ message: { content: reply } }] }));
+    return new Response(JSON.stringify({ candidates: [{ content: { role: 'model', parts: [{ text: reply }] } }] }));
   };
   return { fetch, calls };
 }
 
-test('without an API key the summary is written from the data and says why', async () => {
+test('without a Gemini key the summary is written from the data and says why', async () => {
   const result = await writeSummary(report, { ...options, apiKey: undefined, fetch: () => assert.fail('no request') });
   assert.equal(result.source, 'data');
   assert.equal(result.problem, 'missing_key');
   assert.match(result.summary, /1 of 281 passes, on December 10, 2025/);
-  assert.match(result.note, /XAI_API_KEY isn’t set/);
+  assert.match(result.note, /GEMINI_API_KEY isn’t set/);
 });
 
-test('Grok gets fact sentences, not raw JSON, and a faithful reply is used', async () => {
-  const xai = mockXai(GOOD);
-  const result = await writeSummary(report, { ...options, fetch: xai.fetch });
-  assert.deepEqual(result, { summary: GOOD, source: 'grok' });
-  const [call] = xai.calls;
-  assert.equal(call.url, 'https://xai.test/v1/chat/completions');
-  assert.equal(call.init.headers.Authorization, 'Bearer test-key');
-  assert.equal(call.body.model, 'test-model');
-  assert.equal(call.body.max_tokens, undefined, 'no token cap that reasoning models can exhaust');
-  const prompt = call.body.messages[1].content;
+test('Gemini gets fact sentences, not raw JSON, and a faithful reply is used', async () => {
+  const gemini = mockGemini(GOOD);
+  const result = await writeSummary(report, { ...options, fetch: gemini.fetch });
+  assert.deepEqual(result, { summary: GOOD, source: 'gemini' });
+  const [call] = gemini.calls;
+  assert.equal(call.url, 'https://gemini.test/v1beta/models/gemini-flash-latest:generateContent');
+  assert.equal(call.init.headers['x-goog-api-key'], 'test-key');
+  assert.match(call.body.systemInstruction.parts[0].text, /Use only the FACTS/);
+  assert.deepEqual(call.body.generationConfig, { thinkingConfig: { thinkingLevel: 'low' } });
+  const prompt = call.body.contents[0].parts[0].text;
   assert.match(prompt, /FACTS:\n- Flood: satellite radar saw water/);
   assert.doesNotMatch(prompt, /comparison_area|longitude|"status"/);
 });
 
+test('a model that rejects the thinking setting is asked again without it', async () => {
+  const gemini = mockGemini({ status: 400, body: '{"error":{"message":"Thinking level LOW is not supported for this model."}}' }, GOOD);
+  const result = await writeSummary(report, { ...options, fetch: gemini.fetch });
+  assert.equal(result.source, 'gemini');
+  assert.equal(gemini.calls[1].body.generationConfig, undefined);
+});
+
+test('thought parts are skipped', () => {
+  assert.equal(geminiText({ candidates: [{ content: { parts: [{ text: 'plan', thought: true }, { text: 'Answer.' }] } }] }), 'Answer.');
+});
+
 test('a reply with a rounded number gets one corrective retry', async () => {
-  const xai = mockXai(GOOD.replace('84.7°F', 'about 85°F'), GOOD);
-  const result = await writeSummary(report, { ...options, fetch: xai.fetch });
-  assert.equal(result.source, 'grok');
-  assert.equal(xai.calls.length, 2);
-  assert.match(xai.calls[1].body.messages.at(-1).content, /numbers not in the data: 85/);
+  const gemini = mockGemini(GOOD.replace('84.7°F', 'about 85°F'), GOOD);
+  const result = await writeSummary(report, { ...options, fetch: gemini.fetch });
+  assert.equal(result.source, 'gemini');
+  assert.equal(gemini.calls.length, 2);
+  const turns = gemini.calls[1].body.contents;
+  assert.equal(turns[1].role, 'model');
+  assert.match(turns[2].parts[0].text, /numbers not in the data: 85/);
 });
 
 test('invented numbers twice fall back to the data summary', async () => {
   const logs = [];
-  const xai = mockXai('Satellite radar saw water here on 3 of 281 passes in 2024. Sign up for King County flood alerts. Stay alert.');
-  const result = await writeSummary(report, { ...options, fetch: xai.fetch, log: (m) => logs.push(m) });
+  const gemini = mockGemini('Satellite radar saw water here on 3 of 281 passes in 2024. Sign up for King County flood alerts. Stay alert.');
+  const result = await writeSummary(report, { ...options, fetch: gemini.fetch, log: (m) => logs.push(m) });
   assert.equal(result.source, 'data');
   assert.match(result.summary, /1 of 281 passes/);
-  assert.match(result.note, /didn’t match the data/);
+  assert.match(result.note, /Gemini’s wording didn’t match the data/);
   assert.match(logs[0], /numbers not in the data: 3, 2024/);
 });
 
 test('a reply calling the home safe is never shown', async () => {
-  const xai = mockXai('Satellite radar saw water here on 1 of 281 passes. Otherwise this home is safe and sound. Sign up for King County flood alerts.');
-  assert.equal((await writeSummary(report, { ...options, fetch: xai.fetch })).source, 'data');
+  const gemini = mockGemini('Satellite radar saw water here on 1 of 281 passes. Otherwise this home is safe and sound. Sign up for King County flood alerts.');
+  assert.equal((await writeSummary(report, { ...options, fetch: gemini.fetch })).source, 'data');
 });
 
-test('an unavailable model switches to one the account has', async () => {
-  const xai = mockXai({ status: 404, body: '{"error":"The model test-model does not exist"}' }, GOOD);
-  const result = await writeSummary(report, { ...options, fetch: xai.fetch, findModel: async () => 'grok-4.3' });
-  assert.equal(result.source, 'grok');
-  assert.deepEqual(xai.calls.map((c) => c.body.model), ['test-model', 'grok-4.3']);
+test('an unavailable model switches to one the key can use', async () => {
+  const gemini = mockGemini({ status: 404, body: '{"error":{"message":"models/old is not found"}}' }, GOOD);
+  const result = await writeSummary(report, { ...options, model: 'old', fetch: gemini.fetch, findModel: async () => 'gemini-3-flash-preview' });
+  assert.equal(result.source, 'gemini');
+  assert.match(gemini.calls[1].url, /models\/gemini-3-flash-preview:generateContent$/);
 });
 
-test('xAI failures explain the reason without exposing the key', async () => {
+test('Gemini failures explain the reason without exposing the key', async () => {
   const cases = [
-    [{ status: 401 }, 'bad_key', /rejected the API key/],
-    [{ status: 403, body: 'credits exhausted' }, 'no_credits', /no credits/],
-    [{ status: 429 }, 'rate_limited', /busy/],
-    [{ status: 500 }, 'upstream_error', /problem answering/],
+    [{ status: 400, body: '{"error":{"message":"API key not valid.","details":[{"reason":"API_KEY_INVALID"}]}}' }, 'bad_key', /rejected GEMINI_API_KEY/],
+    [{ status: 403, body: '{"error":{"status":"PERMISSION_DENIED"}}' }, 'bad_key', /rejected GEMINI_API_KEY/],
+    [{ status: 429, body: 'You exceeded your current quota, please check your plan and billing details' }, 'quota', /quota/],
+    [{ status: 429, body: 'Resource exhausted: requests per minute' }, 'rate_limited', /busy/],
+    [{ status: 500 }, 'upstream_error', /problem writing/],
   ];
   for (const [reply, problem, note] of cases) {
-    const result = await writeSummary(report, { ...options, fetch: mockXai(reply).fetch });
+    const result = await writeSummary(report, { ...options, fetch: mockGemini(reply).fetch });
     assert.equal(result.source, 'data');
     assert.equal(result.problem, problem);
     assert.match(result.note, note);
@@ -89,17 +104,18 @@ test('xAI failures explain the reason without exposing the key', async () => {
   }
   const offline = await writeSummary(report, { ...options, fetch: async () => { throw new TypeError('fetch failed'); } });
   assert.equal(offline.problem, 'unreachable');
-  const empty = await writeSummary(report, { ...options, fetch: async () => new Response('{"choices":[{"message":{"content":""}}]}') });
+  const empty = await writeSummary(report, { ...options, fetch: async () => new Response('{"candidates":[]}') });
   assert.equal(empty.problem, 'upstream_error');
 });
 
-test('helpers classify errors, pick models and read tokens', () => {
-  assert.equal(classifyXaiStatus(400, 'Model grok-x not found'), 'model_unavailable');
+test('model pickers and token reader', () => {
+  const listed = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-3-flash-preview', 'gemini-2.5-flash-preview-tts']
+    .map((id) => ({ name: `models/${id}`, supportedGenerationMethods: ['generateContent'] }));
+  assert.equal(pickGeminiModel(listed, 'gemini-3-flash-preview'), 'gemini-3-flash-preview');
+  assert.equal(pickGeminiModel(listed, 'gone'), 'gemini-flash-latest');
+  assert.equal(pickGeminiModel([{ name: 'models/gemini-2.5-flash-preview-tts', supportedGenerationMethods: ['generateContent'] }]), undefined);
+  assert.equal(classifyGeminiStatus(404, ''), 'model_unavailable');
   assert.equal(classifyXaiStatus(400, 'Incorrect API key provided'), 'bad_key');
-  assert.equal(pickTextModel(['grok-4.7', 'grok-voice-latest'], 'grok-4.7'), 'grok-4.7');
   assert.equal(pickTextModel(['grok-imagine-image', 'grok-4.3', 'grok-4.7', 'grok-voice-latest'], 'gone'), 'grok-4.7');
-  assert.equal(pickTextModel(['grok-voice-latest']), undefined);
-  assert.equal(tokenValue({ value: 'a' }), 'a');
   assert.equal(tokenValue({ client_secret: { value: 'b' } }), 'b');
-  assert.equal(tokenValue({}), undefined);
 });

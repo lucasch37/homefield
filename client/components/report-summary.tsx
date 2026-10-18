@@ -9,7 +9,7 @@ export function ReportSummary({
 }: {
   loading: boolean;
   summary: string;
-  source?: "grok" | "data";
+  source?: "gemini" | "data";
   note?: string;
   error: string;
 }) {
@@ -31,7 +31,7 @@ export function ReportSummary({
         </h3>
         {!loading && summary && (
           <span className="ml-auto rounded-full border border-white/15 px-2.5 py-1 text-[8px] tracking-[1.2px] text-white/65">
-            {source === "grok" ? "GROK SUMMARY" : "FROM THE SATELLITE DATA"}
+            {source === "gemini" ? "GEMINI SUMMARY" : "FROM THE SATELLITE DATA"}
           </span>
         )}
       </div>

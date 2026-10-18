@@ -1,6 +1,6 @@
 # Homefield frontend
 
-Next.js app for the Home Hazard Report: address search, map, three hazard cards, a written summary, and Grok Voice follow-up questions.
+Next.js app for the Home Hazard Report: address search, map, three hazard cards, a Gemini-written summary, and Grok Voice follow-up questions.
 
 ## Run locally
 
@@ -8,7 +8,7 @@ Start the FastAPI server first (see [../server/README.md](../server/README.md)),
 
 ```sh
 pnpm install
-cp .env.example .env.local   # add XAI_API_KEY for Grok
+cp .env.example .env.local   # add GEMINI_API_KEY and XAI_API_KEY
 pnpm dev
 ```
 
@@ -19,24 +19,23 @@ Open http://localhost:3000/search. The "Try a place" links include the demo poin
 | Variable | Needed for | Notes |
 | --- | --- | --- |
 | `BACKEND_URL` | Reports | FastAPI base URL. Defaults to `http://127.0.0.1:8000` in development; required in production. |
-| `XAI_API_KEY` | Grok summary and voice | Server only. Without it, the summary is written from the data and voice says it isn't connected. |
-| `XAI_TEXT_MODEL` | Grok summary | Defaults to `grok-4.7`; set it to a text model your xAI account can use. |
-| `XAI_BASE_URL`, `XAI_REALTIME_URL` | Tests only | Point the app at local stand-ins. Leave unset in production. |
+| `GEMINI_API_KEY` | Written summary | Server only. Without it, the summary is written straight from the data. |
+| `GEMINI_MODEL` | Written summary | Optional. Defaults to `gemini-flash-latest`; if the model isn't available, another Gemini Flash model is used. |
+| `XAI_API_KEY` | Grok Voice | Server only. Without it, voice says it isn't connected. |
+| `GEMINI_BASE_URL`, `XAI_BASE_URL`, `XAI_REALTIME_URL` | Tests only | Point the app at local stand-ins. Leave unset in production. |
 
-The xAI variables can also live in the repository-root `.env`; values in `client/.env.local` or the real environment win. Restart the app after changing them.
+The Gemini and xAI variables can also live in the repository-root `.env`; values in `client/.env.local` or the real environment win. Restart the app after changing them.
 
-### Connecting Grok
+### Connecting Gemini and Grok
 
-1. Create a key at console.x.ai with access to chat and voice (realtime), and make sure the account has credits.
-2. Put `XAI_API_KEY=...` in `client/.env.local` (or the repo-root `.env`) and restart `pnpm dev`.
-3. Open http://localhost:3000/api/ai-status. It returns `{"connected": true, ...}` or the exact reason Grok isn't connected (missing key, rejected key or permissions, no credits, model unavailable, or api.x.ai unreachable). The voice panel and the summary show the same reason.
-
-If `XAI_TEXT_MODEL` isn't available to the account, the summary switches to an available Grok text model automatically.
+1. Get a Gemini API key at aistudio.google.com, and an xAI key at console.x.ai with voice (realtime) access and credits.
+2. Put `GEMINI_API_KEY=...` and `XAI_API_KEY=...` in `client/.env.local` (or the repo-root `.env`) and restart `pnpm dev`.
+3. Open http://localhost:3000/api/ai-status. It returns `{"voice": {...}, "summary": {...}}`, each with `"connected": true` or the exact reason it isn't (missing key, rejected key, quota or credits, model unavailable, or service unreachable). The voice panel and the summary show the same reasons.
 
 ## How it works
 
 - `/api/report` forwards `?address=` or `?lat=&lon=` to FastAPI `/hazards` and normalizes each hazard on its own, so one broken layer only affects its card.
-- `/api/summary` turns the report into fixed fact sentences (`lib/facts.ts`), asks Grok to reword them, and rejects any reply that adds a number, uses the word "safe", or runs long. If Grok is missing, slow, or fails that check, the summary is the fact sentences themselves, labeled "From the satellite data".
+- `/api/summary` turns the report into fixed fact sentences (`lib/facts.ts`), asks Gemini (low thinking, about 2 to 3 seconds) to reword them, and rejects any reply that adds a number, uses the word "safe", or runs long, after one corrective retry. If Gemini is missing, slow, or fails that check, the summary is the fact sentences themselves, labeled "From the satellite data".
 - `/api/voice-token` creates a 5-minute xAI token (same-origin requests only). The browser streams microphone PCM to Grok Voice; when Grok calls `get_hazards`, the browser answers with the same fact sentences, or looks up another address the user names.
 - Every number on the cards, charts, summary, and voice answers comes from the `/hazards` response; tests check this against real responses in `tests/fixtures/`.
 

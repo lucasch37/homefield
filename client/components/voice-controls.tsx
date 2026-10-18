@@ -25,7 +25,7 @@ export function VoiceControls({ report }: { report: Report | null }) {
     let live = true;
     fetch("/api/ai-status", { cache: "no-store" })
       .then((response) => response.json())
-      .then((data) => { if (live) setStatus(data); })
+      .then((data) => { if (live) setStatus(data?.voice ?? null); })
       .catch(() => {});
     return () => { live = false; };
   }, []);

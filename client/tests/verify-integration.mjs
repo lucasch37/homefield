@@ -10,6 +10,7 @@ import { once } from 'node:events';
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8'));
 const carnation = { ...fixture('carnation'), address: '31500 NE Example Rd, Carnation, WA 98014' };
 const API_KEY = 'test-xai-key-never-in-browser';
+const GEMINI_KEY = 'test-gemini-key-never-in-browser';
 
 // Stand-in for FastAPI /hazards, replaying real responses from server/data.
 const backend = createServer((req, res) => {
@@ -23,7 +24,7 @@ const backend = createServer((req, res) => {
   else res.end(JSON.stringify(carnation));
 });
 
-// Stand-in for xAI: chat completions and ephemeral realtime tokens.
+// Stand-in for xAI (models, ephemeral realtime tokens) and Gemini (models, generateContent) on one port.
 let chatReply = '';
 const xaiRequests = [];
 const xai = createServer(async (req, res) => {
@@ -31,6 +32,13 @@ const xai = createServer(async (req, res) => {
   for await (const chunk of req) body += chunk;
   xaiRequests.push({ url: req.url, auth: req.headers.authorization, body });
   res.setHeader('Content-Type', 'application/json');
+  if (req.url.startsWith('/v1beta/')) {
+    if (req.headers['x-goog-api-key'] !== GEMINI_KEY) { res.writeHead(400); res.end('{"error":{"message":"API key not valid.","details":[{"reason":"API_KEY_INVALID"}]}}'); return; }
+    if (req.url.startsWith('/v1beta/models?')) res.end(JSON.stringify({ models: [{ name: 'models/gemini-flash-latest', supportedGenerationMethods: ['generateContent'] }] }));
+    else if (req.url === '/v1beta/models/gemini-flash-latest:generateContent') res.end(JSON.stringify({ candidates: [{ content: { parts: [{ text: chatReply }] } }] }));
+    else { res.writeHead(404); res.end('{}'); }
+    return;
+  }
   if (req.headers.authorization !== `Bearer ${API_KEY}`) { res.writeHead(401); res.end('{}'); return; }
   if (req.url === '/v1/chat/completions') res.end(JSON.stringify({ choices: [{ message: { content: chatReply } }] }));
   else if (req.url === '/v1/realtime/client_secrets') res.end(JSON.stringify({ value: 'ephemeral-test-token', expires_at: 1 }));
@@ -46,6 +54,8 @@ const app = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start',
     ...process.env,
     BACKEND_URL: `http://127.0.0.1:${backend.address().port}`,
     XAI_API_KEY: API_KEY,
+    GEMINI_API_KEY: GEMINI_KEY,
+    GEMINI_BASE_URL: `http://127.0.0.1:${xaiPort}/v1beta`,
     XAI_BASE_URL: `http://127.0.0.1:${xaiPort}/v1`,
     XAI_REALTIME_URL: `ws://127.0.0.1:${xaiPort}/realtime`,
   },
@@ -83,12 +93,12 @@ try {
   assert.equal(report.hazards.flood.wet_passes, 1);
   assert.equal(report.hazards.heat.surface_temp_f, 84.7);
 
-  // Summary: faithful Grok text is used; invented numbers fall back to the data summary.
+  // Summary: faithful Gemini text is used; invented numbers fall back to the data summary.
   chatReply = 'Satellite radar saw water at this spot on 1 of 281 passes, on December 10, 2025. The ground and roofs averaged 84.7°F on clear summer days. Sign up for King County flood alerts.';
-  const grok = await (await post('/api/summary', JSON.stringify(report))).json();
-  assert.deepEqual(grok, { summary: chatReply, source: 'grok' });
+  const written = await (await post('/api/summary', JSON.stringify(report))).json();
+  assert.deepEqual(written, { summary: chatReply, source: 'gemini' });
   const sent = JSON.parse(xaiRequests.at(-1).body);
-  assert.match(sent.messages[1].content, /^ADDRESS: 31500 NE Example Rd, Carnation, WA 98014\nFACTS:/);
+  assert.match(sent.contents[0].parts[0].text, /^ADDRESS: 31500 NE Example Rd, Carnation, WA 98014\nFACTS:/);
   chatReply = 'Water was seen on 12 passes in 2019. Sign up for King County flood alerts. The rest is fine.';
   const checked = await (await post('/api/summary', JSON.stringify(report))).json();
   assert.equal(checked.source, 'data');
@@ -104,21 +114,24 @@ try {
   assert.ok(!tokenText.includes(API_KEY));
   assert.equal((await post('/api/voice-token', null, { Origin: 'https://evil.example' })).status, 403);
 
-  // Grok status: connected, with the configured model listed by the account.
-  assert.deepEqual(await (await get('/api/ai-status')).json(), { connected: true, model: 'grok-4.7' });
+  // Status: Grok Voice and the Gemini summary are both connected.
+  assert.deepEqual(await (await get('/api/ai-status')).json(), {
+    voice: { connected: true, model: 'grok-4.7' },
+    summary: { connected: true, model: 'gemini-flash-latest' },
+  });
 
   // Pages render with compiled Tailwind CSS and never ship the API key.
   const html = await (await get('/search')).text();
-  assert.ok(!html.includes(API_KEY), 'API key is not in the page');
+  assert.ok(!html.includes(API_KEY) && !html.includes(GEMINI_KEY), 'API keys are not in the page');
   const assets = [...html.matchAll(/(?:href|src)="(\/_next\/static\/[^"]+\.(?:css|js))"/g)].map((m) => m[1]);
   const css = (await Promise.all(assets.filter((a) => a.endsWith('.css')).map(async (a) => (await get(a)).text()))).join('\n');
   assert.ok(css.includes('.rounded-full'), 'Tailwind utilities are compiled');
   assert.ok(!/@theme\b|@apply\b/.test(css), 'No raw Tailwind directives ship to the browser');
-  for (const asset of assets) assert.ok(!(await (await get(asset)).text()).includes(API_KEY), `${asset} has no API key`);
+  for (const asset of assets) { const text = await (await get(asset)).text(); assert.ok(!text.includes(API_KEY) && !text.includes(GEMINI_KEY), `${asset} has no API key`); }
   assert.equal((await get('/maplibre-worker.mjs')).status, 200);
   assert.equal((await get('/pcm-capture.js')).status, 200);
   assert.ok((await (await get('/about')).text()).includes('href="/search"'));
 
-  console.log('PASS: production pages and CSS, report proxy (address, coordinates, errors, isolation), checked Grok summary with fallback, voice token, origin checks, and no API key in the browser.');
+  console.log('PASS: production pages and CSS, report proxy (address, coordinates, errors, isolation), checked Gemini summary with fallback, voice token, origin checks, and no API key in the browser.');
   if (process.argv.includes('--serve')) { console.log('Preview: http://localhost:3012/search'); await new Promise(() => {}); }
 } finally { cleanup(); }
