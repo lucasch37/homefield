@@ -1,39 +1,44 @@
 "use client";
-if (typeof window !== "undefined") {
-  (window as Window & { __hazardMap?: boolean }).__hazardMap = true;
-}
 import { useEffect, useRef, useState } from "react";
 import { LocateFixed, MapPin, Satellite } from "lucide-react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
-import type { Report } from "@/lib/types";
+import { finding } from "@/lib/hazards";
+import { formatCoordinate, placeLabel } from "@/lib/format";
+import type { HazardKind, Report } from "@/lib/types";
+
+const ESRI_ATTRIBUTION =
+  'Imagery © <a href="https://www.esri.com/" target="_blank" rel="noreferrer">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community';
+const LAYER_NAMES: Record<HazardKind, string> = {
+  flood: "Flood",
+  heat: "Heat",
+  ground_motion: "Movement",
+};
+// Pin colors only encode the status already shown on the cards; gray means no reliable reading.
+const NO_READING = "#9aa7a1";
 
 export function HazardMap({
   report,
   loading,
+  label,
 }: {
   report: Report | null;
   loading: boolean;
+  /** Friendly name for demo places searched by coordinates. */
+  label?: string;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const marker = useRef<MapLibreMarker | null>(null);
   const [error, setError] = useState(false);
   const [ready, setReady] = useState(false);
+  const loaded = useRef(false);
   const [activeLayer, setActiveLayer] = useState<
     "flood" | "heat" | "ground_motion"
-  >("heat");
+  >("flood");
   useEffect(() => {
     let disposed = false;
-    const mark = (message: string) => {
-      const target = window as Window & { __mapDebug?: string };
-      target.__mapDebug = `${target.__mapDebug || ""} | ${message}`;
-    };
-    mark("effect");
     import("maplibre-gl")
       .then((maplibre) => {
-        mark(
-          `then disposed=${disposed} container=${Boolean(container.current)} map=${typeof maplibre.Map}`,
-        );
         if (disposed || !container.current) return;
         try {
           maplibre.setWorkerUrl("/maplibre-worker.mjs");
@@ -49,6 +54,7 @@ export function HazardMap({
                     "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
                   ],
                   tileSize: 256,
+                  attribution: ESRI_ATTRIBUTION,
                 },
 
                 labels: {
@@ -122,7 +128,9 @@ export function HazardMap({
                     "#ff4f9a",
                     "permanent_water",
                     "#27c7b7",
+                    "no_flooding_seen",
                     "#d7e8df",
+                    NO_READING,
                   ],
                   "circle-radius": 15,
                   "circle-opacity": 0.92,
@@ -151,15 +159,20 @@ export function HazardMap({
                 layout: { visibility: "visible" },
                 paint: {
                   "circle-color": [
-                    "interpolate",
-                    ["linear"],
-                    ["get", "surface_temp_f"],
-                    75,
-                    "#ffd166",
-                    95,
-                    "#ff6b35",
-                    105,
-                    "#ed2f87",
+                    "case",
+                    ["has", "surface_temp_f"],
+                    [
+                      "interpolate",
+                      ["linear"],
+                      ["get", "surface_temp_f"],
+                      75,
+                      "#ffd166",
+                      95,
+                      "#ff6b35",
+                      105,
+                      "#ed2f87",
+                    ],
+                    NO_READING,
                   ],
                   "circle-radius": 38,
                   "circle-opacity": 0.3,
@@ -173,15 +186,20 @@ export function HazardMap({
                 layout: { visibility: "visible" },
                 paint: {
                   "circle-color": [
-                    "interpolate",
-                    ["linear"],
-                    ["get", "surface_temp_f"],
-                    75,
-                    "#dfe9e3",
-                    95,
-                    "#f151bb",
-                    105,
-                    "#ed2f87",
+                    "case",
+                    ["has", "surface_temp_f"],
+                    [
+                      "interpolate",
+                      ["linear"],
+                      ["get", "surface_temp_f"],
+                      75,
+                      "#dfe9e3",
+                      95,
+                      "#f151bb",
+                      105,
+                      "#ed2f87",
+                    ],
+                    NO_READING,
                   ],
                   "circle-radius": 16,
                   "circle-opacity": 0.94,
@@ -207,11 +225,16 @@ export function HazardMap({
                 source: "hazard-overlay",
                 layout: { visibility: "none" },
                 paint: {
-                  "circle-color": "#7c6cff",
+                  "circle-color": [
+                    "case",
+                    ["has", "velocity_mm_per_yr"],
+                    "#7c6cff",
+                    NO_READING,
+                  ],
                   "circle-radius": [
                     "interpolate",
                     ["linear"],
-                    ["abs", ["get", "velocity_mm_per_yr"]],
+                    ["abs", ["coalesce", ["get", "velocity_mm_per_yr"], 0]],
                     0,
                     13,
                     5,
@@ -229,28 +252,33 @@ export function HazardMap({
               // laying it out, leaving its canvas at the default 300px height.
               // Resize once the style is ready so the basemap fills the panel.
               instance.resize();
+              // Keep the image credit collapsed on phones so it doesn't cover the map.
+              if (window.innerWidth < 760) {
+                const credit = container.current?.querySelector(".maplibregl-compact-show");
+                credit?.classList.remove("maplibregl-compact-show");
+                credit?.removeAttribute("open");
+              }
+              loaded.current = true;
               setReady(true);
               setError(false);
             }
           });
+          // A single failed tile is not a broken map; only flag errors before the first load.
           instance.on("error", () => {
-            if (!disposed && !instance.isStyleLoaded()) setError(true);
+            if (!disposed && !loaded.current) setError(true);
           });
           const resizeObserver = new ResizeObserver(() => instance.resize());
           resizeObserver.observe(container.current);
           instance.once("remove", () => resizeObserver.disconnect());
-        } catch (err) {
-          mark(`ctor ${err instanceof Error ? err.stack : String(err)}`);
+        } catch {
           setError(true);
         }
       })
-      .catch((err: unknown) => {
-        mark(`catch ${err instanceof Error ? err.stack : String(err)}`);
+      .catch(() => {
         if (!disposed) setError(true);
       });
     return () => {
       disposed = true;
-      mark("cleanup");
       marker.current?.remove();
       map.current?.remove();
       map.current = null;
@@ -273,7 +301,7 @@ export function HazardMap({
       const pin = document.createElement("div");
       pin.className =
         "size-[22px] rounded-full border-4 border-white bg-[var(--brand-accent)] shadow-[0_0_0_12px_color-mix(in_srgb,var(--brand-accent),transparent_82%),0_2px_10px_#0004]";
-      pin.setAttribute("aria-label", report.address);
+      pin.setAttribute("aria-label", placeLabel(report));
       pin.setAttribute("role", "img");
       marker.current = new maplibre.Marker({ element: pin })
         .setLngLat([report.lon, report.lat])
@@ -335,11 +363,20 @@ export function HazardMap({
                 type: "Point",
                 coordinates: [report.lon, report.lat],
               },
+              // Missing readings are left out so the pin shows "no reading", never a made-up value.
               properties: {
                 status: report.hazards.flood.status,
-                surface_temp_f: report.hazards.heat.surface_temp_f ?? 0,
-                velocity_mm_per_yr:
-                  report.hazards.ground_motion.velocity_mm_per_yr ?? 0,
+                ...(report.hazards.heat.status === "ok" &&
+                report.hazards.heat.surface_temp_f !== undefined
+                  ? { surface_temp_f: report.hazards.heat.surface_temp_f }
+                  : {}),
+                ...(report.hazards.ground_motion.status === "ok" &&
+                report.hazards.ground_motion.velocity_mm_per_yr !== undefined
+                  ? {
+                      velocity_mm_per_yr:
+                        report.hazards.ground_motion.velocity_mm_per_yr,
+                    }
+                  : {}),
               },
             },
           ]
@@ -367,20 +404,22 @@ export function HazardMap({
             type="button"
             onClick={() => setActiveLayer(layer)}
           >
-            {layer === "ground_motion"
-              ? "Movement"
-              : layer === "flood"
-                ? "Flood"
-                : "Heat"}
+            {LAYER_NAMES[layer]}
           </button>
         ))}
       </div>
-      <div
-        className="absolute top-[83px] left-7 text-center text-[9px] text-foreground"
-        aria-hidden="true"
-      >
-        N<span className="block text-[28px] leading-[1.1]">↑</span>
-      </div>
+      {report && (
+        <div
+          className="absolute top-[100px] left-[18px] max-w-[min(320px,calc(100%-90px))] rounded-md bg-card/95 px-3 py-2 text-[10px] leading-[1.5] text-card-foreground shadow-[0_2px_8px_#001f1a33]"
+          data-testid="map-reading"
+        >
+          <span className="font-semibold">{LAYER_NAMES[activeLayer]} at this pin:</span>{" "}
+          {finding(report.hazards[activeLayer], activeLayer).label}
+          {finding(report.hazards[activeLayer], activeLayer).metric
+            ? ` · ${finding(report.hazards[activeLayer], activeLayer).metric}`
+            : ""}
+        </div>
+      )}
       {error && (
         <div
           className="absolute inset-x-[18px] top-[42%] rounded-[5px] bg-card/95 p-[15px] text-center text-xs text-card-foreground"
@@ -390,7 +429,7 @@ export function HazardMap({
         </div>
       )}
       <button
-        className="absolute top-[99px] right-5 grid size-8 place-items-center rounded-[5px] bg-card text-foreground disabled:cursor-not-allowed"
+        className="absolute top-[99px] right-[10px] grid size-[29px] place-items-center rounded-[5px] bg-card text-card-foreground shadow-[0_1px_8px_#001f1a66] hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
         type="button"
         aria-label="Recenter map"
         disabled={!ready}
@@ -413,12 +452,12 @@ export function HazardMap({
             {loading
               ? "Finding your place…"
               : report
-                ? report.address
+                ? label || report.address || "Selected point"
                 : "A closer look at the place you call home."}
           </strong>
           <p className="mt-[5px] text-[10px] leading-[1.5] text-[#c1d3ce] max-[760px]:text-[9px]">
             {report
-              ? `${report.lat.toFixed(5)}° N · ${Math.abs(report.lon).toFixed(5)}° W`
+              ? `${formatCoordinate(report.lat)}° N · ${formatCoordinate(Math.abs(report.lon))}° W`
               : "Start with an address. See what satellites observed."}
           </p>
         </div>

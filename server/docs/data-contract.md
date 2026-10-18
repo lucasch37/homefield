@@ -69,7 +69,7 @@ The API matches the pipeline reference lookup by taking the left insertion index
 2. Reliability flag: 1 usable, 0 unreliable.
 3. Onward: cumulative displacement in millimeters at the dates in `node_dates`.
 
-Nodata is NaN. Only the first two bands determine whether velocity is usable. A zero velocity with flag one is valid. Missing history values remain null in `series_mm`; they do not discard a valid velocity. Band count must equal `2 + len(node_dates)`.
+Nodata is NaN. The API rounds velocity and displacement to 0.1 mm. Only the first two bands determine whether velocity is usable. A zero velocity with flag one is valid. Missing history values remain null in `series_mm`; they do not discard a valid velocity. Band count must equal `2 + len(node_dates)`.
 
 `ground_motion/ground_stats.json` supplies `node_dates` (unique, increasing ISO dates), `frame`, `variable`, `sign_note`, and optional `chain_warnings`. Source dates use the first/last node dates. Chain warnings are carried in the limitations. The delivered sign note requests verification before user interpretation, so the API returns `sign_convention_verified: false` and does not label signed velocity as vertical sinking or rising. No unsupported noise threshold or safety label is inferred.
 

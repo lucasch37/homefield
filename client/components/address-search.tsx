@@ -1,6 +1,7 @@
 "use client";
 import { ArrowRight, ArrowUpRight, LoaderCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { DEMO_PLACES } from "@/lib/search";
 import { HaloSearchInput } from "./ui/halo-search";
 
 export function AddressSearch({
@@ -8,7 +9,7 @@ export function AddressSearch({
   onSearch,
 }: {
   loading: boolean;
-  onSearch: (address: string) => void;
+  onSearch: (query: string) => void;
 }) {
   const [address, setAddress] = useState("400 Broad St, Seattle, WA 98109");
   function submit(event: FormEvent) {
@@ -42,7 +43,7 @@ export function AddressSearch({
           disabled={loading}
         />
         <button
-          className="flex items-center h-full justify-center gap-2 rounded-full border-0 bg-primary px-[21px] py-4 text-xs !text-[var(--primary-foreground)] transition-colors hover:not-disabled:bg-[color-mix(in_srgb,var(--primary),black_12%)] disabled:cursor-not-allowed disabled:opacity-55 max-[760px]:w-full max-[760px]:p-[13px] max-[760px]:text-[11px]"
+          className="flex h-full items-center justify-center gap-2 rounded-full border-0 bg-primary px-[21px] py-4 text-xs !text-[var(--primary-foreground)] transition-colors hover:not-disabled:bg-[color-mix(in_srgb,var(--primary),black_12%)] disabled:cursor-not-allowed disabled:opacity-55 max-[760px]:w-full max-[760px]:p-[13px] max-[760px]:text-[11px]"
           type="submit"
           disabled={loading || !address.trim()}
         >
@@ -57,25 +58,24 @@ export function AddressSearch({
           )}
         </button>
       </form>
-      <div className="flex flex-wrap items-center gap-[15px] pt-3 text-[10px] text-muted-foreground max-[760px]:gap-2.5 max-[760px]:text-[9px]">
-        <span>Try a familiar place</span>
-        {["400 Broad St, Seattle, WA", "3215 E Union St, Seattle, WA"].map(
-          (value, index) => (
-            <button
-              className="flex items-center gap-1 border-0 border-b border-border bg-transparent p-0 text-muted-foreground hover:text-primary"
-              type="button"
-              key={value}
-              disabled={loading}
-              onClick={() => {
-                setAddress(value);
-                onSearch(value);
-              }}
-            >
-              {index === 0 ? "Seattle Center" : "Central District"}
-              <ArrowUpRight size={12} />
-            </button>
-          ),
-        )}
+      <div className="flex flex-wrap items-center gap-[15px] pt-3 text-[11px] text-muted-foreground max-[760px]:gap-2.5 max-[760px]:text-[10px]">
+        <span>Try a place</span>
+        {DEMO_PLACES.map((place) => (
+          <button
+            className="flex items-center gap-1 border-0 border-b border-border bg-transparent p-0 text-muted-foreground hover:text-primary disabled:opacity-50"
+            type="button"
+            key={place.label}
+            disabled={loading}
+            onClick={() => {
+              setAddress(place.query);
+              onSearch(place.query);
+            }}
+          >
+            {place.label}
+            <ArrowUpRight size={12} />
+          </button>
+        ))}
+        <span className="basis-full text-[10px] opacity-80">You can also enter coordinates, like “47.664, -121.92”.</span>
       </div>
     </div>
   );
