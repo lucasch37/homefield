@@ -31,5 +31,5 @@ export const DEMO_PLACES: { label: string; query: string }[] = [
   { label: "UW, Union Bay", query: "47.65626, -122.2981" },
   { label: "Carnation valley floor", query: "47.664, -121.92" },
   { label: "Fall City", query: "3608 324th Ave SE, Fall City, WA 98024" },
-  { label: "SODO, Seattle", query: "47.58, -122.335" },
+  { label: "SODO, Seattle", query: "2401 Utah Ave S, Seattle, WA 98134" },
 ];

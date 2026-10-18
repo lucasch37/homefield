@@ -121,7 +121,12 @@ function CompareView({ queries: initial }: { queries: string[] }) {
         <SeverityScale />
       </div>
 
-      <ol className="m-0 mb-5 grid list-none gap-2 p-0 md:grid-cols-3 md:gap-3" aria-label="Compared addresses">
+      <ol
+        className={`m-0 mb-5 grid list-none gap-2 p-0 md:gap-[18px] max-[1050px]:md:gap-[13px] ${
+          queries.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"
+        }`}
+        aria-label="Compared addresses"
+      >
         {queries.map((query, index) => {
           const column = columns[index];
           return (
