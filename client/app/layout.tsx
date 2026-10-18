@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   title: "Homefield — A clearer picture of home",
   description:
     "Explore satellite observations of flooding, surface heat, and slow ground movement at your King County address, with sources and limitations.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -22,10 +25,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn(
-        "scroll-smooth font-sans motion-reduce:scroll-auto",
-        inter.variable,
-      )}
+      className={cn("font-sans motion-reduce:scroll-auto", inter.variable)}
     >
       <body className="m-0 bg-background text-sm text-foreground antialiased">
         <div className="mx-auto max-w-[1536px] px-[6.3%] max-[1050px]:px-[5%] max-[760px]:px-[6%]">
