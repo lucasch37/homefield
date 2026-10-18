@@ -433,7 +433,7 @@ export function HazardMap({
         </div>
       )}
       <button
-        className="absolute top-[99px] right-[10px] grid size-[29px] place-items-center rounded-[5px] bg-card text-card-foreground shadow-[0_1px_8px_#001f1a66] hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+        className="absolute top-[99px] right-[20px] grid size-[29px] place-items-center rounded-[5px] bg-card text-card-foreground shadow-[0_1px_8px_#001f1a66] hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
         type="button"
         aria-label="Recenter map"
         disabled={!ready}
