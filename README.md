@@ -11,6 +11,7 @@ server/
 pipelines/
 ├── builders/       Offline data downloads and processing
 ├── validation/     Data-team lookup tools and optional inspection API
+├── make_figures.py Draws the /data page figures into client/public/data-figures/
 └── .cache/         Ignored raw downloads and intermediate files
 docs/               Product specifications
 ```
@@ -38,6 +39,13 @@ pnpm dev
 ```
 
 Open [the address search](http://localhost:3000/search) and try an address or one of the demo places. The browser only talks to the Next.js app: `/api/report` forwards to FastAPI `/hazards`, `/api/summary` has Gemini write the summary, and `/api/voice-token` hands the browser a short-lived Grok Voice token. The keys and backend URL stay on the server. Without a Gemini key the summary is written directly from the data; without an xAI key everything except voice still works.
+
+[The data tab](http://localhost:3000/data) explains the satellite sources behind each hazard with figures drawn from the processed data. The figures are committed PNGs; to redraw them, run from the repository root:
+
+```sh
+pip install rasterio numpy pyproj matplotlib requests pillow
+python pipelines/make_figures.py
+```
 
 ## Checks
 
