@@ -1,5 +1,5 @@
 import { build, loadEnv } from 'vite';
-import { writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 const env = { ...loadEnv('production', process.cwd(), ''), ...process.env };
 const base = env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const origins = [...new Set([base, ...(env.VITE_API_ALLOWED_ORIGINS || '').split(',').filter(Boolean)].map(value => {
@@ -12,12 +12,19 @@ await build({ define: { __API_BASE__: JSON.stringify(base), __API_ORIGINS__: JSO
 for (const entry of ['background', 'content']) {
   await build({ configFile: false, build: { emptyOutDir: false, rollupOptions: { output: { footer: entry === 'content' ? 'globalThis.__homeHazardExtraction;' : '' } }, lib: { entry: `src/${entry}.ts`, name: entry, formats: ['iife'], fileName: () => `${entry}.js` } } });
 }
+await mkdir('dist/icons', { recursive: true });
+await copyFile('public/h.svg', 'dist/h.svg');
+for (const size of [16, 32, 48, 128]) {
+  await copyFile(`public/icon-${size}.png`, `dist/icons/icon-${size}.png`);
+}
+const icons = { 16: 'icons/icon-16.png', 32: 'icons/icon-32.png', 48: 'icons/icon-48.png', 128: 'icons/icon-128.png' };
 await writeFile('dist/manifest.json', JSON.stringify({
   manifest_version: 3, name: 'homefield.', version: '0.1.0', minimum_chrome_version: '116',
   description: 'Satellite observations for King County listings on Zillow and Redfin.',
   permissions: ['activeTab', 'scripting', 'sidePanel', 'storage'],
   host_permissions: origins.map(origin => `${new URL(origin).protocol}//${new URL(origin).hostname}/*`),
-  action: { default_title: 'Open homefield.' },
+  icons,
+  action: { default_title: 'Open homefield.', default_icon: icons },
   background: { service_worker: 'background.js' }, side_panel: { default_path: 'sidepanel.html' },
   content_security_policy: { extension_pages: "script-src 'self'; object-src 'none'; base-uri 'none'" }
 }, null, 2));

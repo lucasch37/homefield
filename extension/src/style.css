@@ -1,22 +1,22 @@
 :root {
-  --background: #030207;
+  --background: #07040d;
   --foreground: #eef1ff;
-  --card: #0d0918;
+  --card: #0b0614;
   --card-foreground: #eef1ff;
-  --primary: #a78bfa;
-  --primary-foreground: #090511;
-  --secondary: #171025;
+  --primary: #c4b5fd;
+  --primary-foreground: #1e1033;
+  --secondary: #120b1f;
   --secondary-foreground: #eef1ff;
-  --muted: #171025;
-  --muted-foreground: #aaa1c2;
-  --accent: #4b2e83;
-  --accent-foreground: #ffffff;
+  --muted: #120b1f;
+  --muted-foreground: #b8a9d9;
+  --accent: #1f1632;
+  --accent-foreground: #ddd3fe;
   --destructive: #fb7185;
-  --border: #33244f;
-  --input: #3b2a59;
-  --ring: #a78bfa;
-  --brand-accent: #a78bfa;
-  --aurora-gradient: linear-gradient(90deg, #c4b5fd, #8b5cf6);
+  --border: #1f1632;
+  --input: #2a1f44;
+  --ring: #c4b5fd;
+  --brand-accent: #c4b5fd;
+  --aurora-gradient: linear-gradient(90deg, #ddd3fe, #c4b5fd);
   --radius: 0.625rem;
   --signal: #c4b5fd;
   font-family: "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
@@ -79,7 +79,7 @@ body::after {
 header {
   padding: 22px 18px 20px;
   border-bottom: 1px solid rgb(255 255 255 / 10%);
-  background: linear-gradient(180deg, rgb(13 9 24 / 88%), rgb(3 2 7 / 40%));
+  background: linear-gradient(180deg, rgb(11 6 20 / 92%), rgb(7 4 13 / 45%));
   backdrop-filter: blur(12px);
 }
 
@@ -92,7 +92,7 @@ header {
 
 .wordmark {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.4px;
@@ -100,7 +100,11 @@ header {
   text-decoration: none;
 }
 
-.wordmark .dot { color: var(--brand-accent); }
+.wordmark .dot {
+  color: var(--brand-accent);
+  margin: 0;
+  letter-spacing: 0;
+}
 
 .region {
   display: inline-flex;
@@ -155,7 +159,7 @@ button {
   font-weight: 600;
   font-size: 12px;
   cursor: pointer;
-  box-shadow: 0 0 28px rgb(139 92 246 / 28%);
+  box-shadow: 0 0 28px rgb(196 181 253 / 28%);
 }
 
 button:hover:not(:disabled) {
@@ -191,7 +195,7 @@ label {
 
 input, textarea {
   border: 1px solid rgb(196 181 253 / 22%);
-  background: linear-gradient(to bottom, rgb(13 9 24 / 92%), rgb(13 9 24 / 78%));
+  background: linear-gradient(to bottom, rgb(11 6 20 / 94%), rgb(11 6 20 / 78%));
   color: var(--foreground);
   padding: 12px 14px;
   resize: vertical;
@@ -217,20 +221,20 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
 }
 
 .notice {
-  background: rgb(23 16 37 / 85%);
-  border: 1px solid rgb(167 139 250 / 28%);
+  background: rgb(18 11 31 / 88%);
+  border: 1px solid rgb(196 181 253 / 28%);
   padding: 12px 14px;
   border-radius: 14px;
   line-height: 1.6;
   font-size: 12px;
-  color: #ddd6fe;
+  color: #ddd3fe;
   overflow-wrap: anywhere;
   margin: 12px 0;
 }
 
 .notice[aria-busy="true"] {
-  border-color: rgb(167 139 250 / 45%);
-  background: rgb(46 27 79 / 55%);
+  border-color: rgb(196 181 253 / 45%);
+  background: rgb(31 22 50 / 70%);
 }
 
 .empty {
@@ -240,7 +244,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
   color: var(--muted-foreground);
   border: 1px solid rgb(196 181 253 / 15%);
   border-radius: 18px;
-  background: rgb(13 9 24 / 70%);
+  background: rgb(11 6 20 / 75%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
 }
 
@@ -339,8 +343,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
 
 .hazard.tone-good {
   --signal: #c4b5fd;
-  border-color: #7c3aed;
-  background: #2e1b4f;
+  border-color: #7f6bc0;
+  background: #1f1632;
 }
 
 .hazard.tone-average {
@@ -480,7 +484,7 @@ dl {
   margin: 10px 0;
 }
 
-dt { color: #aaa1c2; }
+dt { color: var(--muted-foreground); }
 dd { margin: 0; overflow-wrap: anywhere; color: var(--foreground); }
 
 ul { padding-left: 17px; margin: 8px 0; }
@@ -506,7 +510,7 @@ h4 {
 .disclaimer svg {
   flex-shrink: 0;
   margin-top: 2px;
-  color: #a78bfa;
+  color: var(--brand-accent);
 }
 
 .settings {
@@ -514,7 +518,7 @@ h4 {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 4px 12px 12px;
-  background: rgb(13 9 24 / 55%);
+  background: rgb(11 6 20 / 55%);
 }
 
 .settings summary {
@@ -577,7 +581,7 @@ th, td {
   border-bottom: 1px solid rgb(255 255 255 / 12%);
 }
 
-th { color: #aaa1c2; font-weight: 550; }
+th { color: var(--muted-foreground); font-weight: 550; }
 
 @keyframes enter {
   from { opacity: 0; transform: translateY(10px); }
