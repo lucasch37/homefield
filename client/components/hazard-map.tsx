@@ -1,44 +1,73 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+if (typeof window !== "undefined") {
+  (window as Window & { __hazardMap?: boolean }).__hazardMap = true;
+}
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LocateFixed, MapPin, Satellite } from "lucide-react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import { finding } from "@/lib/hazards";
 import { formatCoordinate, placeLabel } from "@/lib/format";
-import type { HazardKind, Report } from "@/lib/types";
+import type { Report } from "@/lib/types";
 
+const COUNTY_CENTER: [number, number] = [-121.95, 47.48];
+const COUNTY_ZOOM = 8.3;
+const INTRO_ZOOM = 5.3;
+const INTRO_SECONDS = 2.2;
+const HERO_MARKER_OFFSET: [number, number] = [0, 250];
 const ESRI_ATTRIBUTION =
   'Imagery © <a href="https://www.esri.com/" target="_blank" rel="noreferrer">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community';
-const LAYER_NAMES: Record<HazardKind, string> = {
-  flood: "Flood",
-  heat: "Heat",
-  ground_motion: "Movement",
-};
-// Pin colors only encode the status already shown on the cards; gray means no reliable reading.
-const NO_READING = "#9aa7a1";
+
+const GLASS =
+  "border border-violet-300/15 bg-[#0d0918]/80 text-[#eef1ff] shadow-[0_8px_24px_-12px_rgba(0,0,0,.8)] backdrop-blur-md";
 
 export function HazardMap({
   report,
   loading,
   label,
+  variant = "card",
+  intro = false,
+  replayIntro = 0,
+  resetView = 0,
+  chromeIn = true,
 }: {
   report: Report | null;
   loading: boolean;
-  /** Friendly name for demo places searched by coordinates. */
   label?: string;
+  variant?: "hero" | "card";
+  intro?: boolean;
+  replayIntro?: number;
+  resetView?: number;
+  chromeIn?: boolean;
 }) {
+  const hero = variant === "hero";
+  const introPending = useRef(intro);
+  const handledReplay = useRef(replayIntro);
+  // A layout effect, so a replay requested on arrival is pending before the map is created.
+  useLayoutEffect(() => {
+    if (replayIntro === handledReplay.current) return;
+    handledReplay.current = replayIntro;
+    introPending.current = true;
+  }, [replayIntro]);
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const marker = useRef<MapLibreMarker | null>(null);
   const [error, setError] = useState(false);
   const [ready, setReady] = useState(false);
-  const loaded = useRef(false);
   const [activeLayer, setActiveLayer] = useState<
     "flood" | "heat" | "ground_motion"
-  >("flood");
+  >("heat");
   useEffect(() => {
     let disposed = false;
+    const mark = (message: string) => {
+      const target = window as Window & { __mapDebug?: string };
+      target.__mapDebug = `${target.__mapDebug || ""} | ${message}`;
+    };
+    mark("effect");
     import("maplibre-gl")
       .then((maplibre) => {
+        mark(
+          `then disposed=${disposed} container=${Boolean(container.current)} map=${typeof maplibre.Map}`,
+        );
         if (disposed || !container.current) return;
         try {
           maplibre.setWorkerUrl("/maplibre-worker.mjs");
@@ -86,10 +115,11 @@ export function HazardMap({
                   },
                 },
               ],
+              ...(introPending.current && { projection: { type: "globe" } }),
             },
 
-            center: [-121.95, 47.48],
-            zoom: 8.3,
+            center: COUNTY_CENTER,
+            zoom: introPending.current ? INTRO_ZOOM : COUNTY_ZOOM,
             attributionControl: { compact: true },
           });
           map.current = instance;
@@ -128,9 +158,7 @@ export function HazardMap({
                     "#ff4f9a",
                     "permanent_water",
                     "#27c7b7",
-                    "no_flooding_seen",
                     "#d7e8df",
-                    NO_READING,
                   ],
                   "circle-radius": 15,
                   "circle-opacity": 0.92,
@@ -159,20 +187,15 @@ export function HazardMap({
                 layout: { visibility: "visible" },
                 paint: {
                   "circle-color": [
-                    "case",
-                    ["has", "surface_temp_f"],
-                    [
-                      "interpolate",
-                      ["linear"],
-                      ["get", "surface_temp_f"],
-                      75,
-                      "#ffd166",
-                      95,
-                      "#ff6b35",
-                      105,
-                      "#ed2f87",
-                    ],
-                    NO_READING,
+                    "interpolate",
+                    ["linear"],
+                    ["get", "surface_temp_f"],
+                    75,
+                    "#ffd166",
+                    95,
+                    "#ff6b35",
+                    105,
+                    "#ed2f87",
                   ],
                   "circle-radius": 38,
                   "circle-opacity": 0.3,
@@ -186,20 +209,15 @@ export function HazardMap({
                 layout: { visibility: "visible" },
                 paint: {
                   "circle-color": [
-                    "case",
-                    ["has", "surface_temp_f"],
-                    [
-                      "interpolate",
-                      ["linear"],
-                      ["get", "surface_temp_f"],
-                      75,
-                      "#dfe9e3",
-                      95,
-                      "#f151bb",
-                      105,
-                      "#ed2f87",
-                    ],
-                    NO_READING,
+                    "interpolate",
+                    ["linear"],
+                    ["get", "surface_temp_f"],
+                    75,
+                    "#dfe9e3",
+                    95,
+                    "#f151bb",
+                    105,
+                    "#ed2f87",
                   ],
                   "circle-radius": 16,
                   "circle-opacity": 0.94,
@@ -225,16 +243,11 @@ export function HazardMap({
                 source: "hazard-overlay",
                 layout: { visibility: "none" },
                 paint: {
-                  "circle-color": [
-                    "case",
-                    ["has", "velocity_mm_per_yr"],
-                    "#7c6cff",
-                    NO_READING,
-                  ],
+                  "circle-color": "#7c6cff",
                   "circle-radius": [
                     "interpolate",
                     ["linear"],
-                    ["abs", ["coalesce", ["get", "velocity_mm_per_yr"], 0]],
+                    ["abs", ["get", "velocity_mm_per_yr"]],
                     0,
                     13,
                     5,
@@ -252,54 +265,62 @@ export function HazardMap({
               // laying it out, leaving its canvas at the default 300px height.
               // Resize once the style is ready so the basemap fills the panel.
               instance.resize();
-              // Keep the image credit collapsed on phones so it doesn't cover the map.
-              if (window.innerWidth < 760) {
-                const credit = container.current?.querySelector(
-                  ".maplibregl-compact-show",
-                );
-                credit?.classList.remove("maplibregl-compact-show");
-                credit?.removeAttribute("open");
-              }
-              loaded.current = true;
               setReady(true);
               setError(false);
             }
           });
-          // A single failed tile is not a broken map; only flag errors before the first load.
           instance.on("error", () => {
-            if (!disposed && !loaded.current) setError(true);
+            if (!disposed && !instance.isStyleLoaded()) setError(true);
           });
           const resizeObserver = new ResizeObserver(() => instance.resize());
           resizeObserver.observe(container.current);
           instance.once("remove", () => resizeObserver.disconnect());
-        } catch {
+        } catch (err) {
+          mark(`ctor ${err instanceof Error ? err.stack : String(err)}`);
           setError(true);
         }
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        mark(`catch ${err instanceof Error ? err.stack : String(err)}`);
         if (!disposed) setError(true);
       });
     return () => {
       disposed = true;
+      mark("cleanup");
       marker.current?.remove();
       map.current?.remove();
       map.current = null;
+      // cacheComponents hides this page instead of unmounting it, and the map is rebuilt when
+      // the page is shown again, so everything keyed on `ready` must wait for the new map.
+      setReady(false);
     };
   }, []);
   useEffect(() => {
-    if (!ready || !map.current) return;
+    const instance = map.current;
+    if (!ready || !instance) return;
     let active = true;
+    const introFlight = introPending.current;
+    introPending.current = false;
+    const flyTo = (center: [number, number], zoom: number) => {
+      if (introFlight) {
+        instance.setProjection({ type: "globe" });
+        instance.jumpTo({ center: COUNTY_CENTER, zoom: INTRO_ZOOM });
+      }
+      instance.flyTo({
+        center,
+        zoom,
+        essential: true,
+        ...(hero && { offset: HERO_MARKER_OFFSET }),
+        ...(introFlight && { duration: INTRO_SECONDS * 1000, curve: 1.2 }),
+      });
+    };
     marker.current?.remove();
     if (!report) {
-      map.current.flyTo({
-        center: [-121.95, 47.48],
-        zoom: 8.3,
-        essential: true,
-      });
+      flyTo(COUNTY_CENTER, COUNTY_ZOOM);
       return;
     }
     import("maplibre-gl").then((maplibre) => {
-      if (!active || !map.current) return;
+      if (!active) return;
       const pin = document.createElement("div");
       pin.className =
         "size-[22px] rounded-full border-4 border-white bg-[var(--brand-accent)] shadow-[0_0_0_12px_color-mix(in_srgb,var(--brand-accent),transparent_82%),0_2px_10px_#0004]";
@@ -307,17 +328,13 @@ export function HazardMap({
       pin.setAttribute("role", "img");
       marker.current = new maplibre.Marker({ element: pin })
         .setLngLat([report.lon, report.lat])
-        .addTo(map.current);
-      map.current.flyTo({
-        center: [report.lon, report.lat],
-        zoom: 14,
-        essential: true,
-      });
+        .addTo(instance);
+      flyTo([report.lon, report.lat], 14);
     });
     return () => {
       active = false;
     };
-  }, [report, ready]);
+  }, [hero, report, ready, replayIntro, resetView]);
   useEffect(() => {
     if (!ready || !map.current) return;
     const layers = ["flood", "heat", "ground_motion"] as const;
@@ -365,7 +382,6 @@ export function HazardMap({
                 type: "Point",
                 coordinates: [report.lon, report.lat],
               },
-              // Missing readings are left out so the pin shows "no reading", never a made-up value.
               properties: {
                 status: report.hazards.flood.status,
                 ...(report.hazards.heat.status === "ok" &&
@@ -385,69 +401,94 @@ export function HazardMap({
         : [],
     });
   }, [report, ready]);
+  const fadeIn = chromeIn
+    ? "opacity-100 transition-opacity duration-500"
+    : "pointer-events-none opacity-0";
   return (
     <section
-      className="relative h-[clamp(430px,55vw,640px)] overflow-hidden rounded-[16px] bg-secondary shadow-[0_22px_55px_-38px_#002f28] max-[760px]:h-[370px] [&_.maplibregl-ctrl-top-right]:!top-[14px] [&_.maplibregl-ctrl-top-right]:!right-[10px] [&_.maplibregl-ctrl-group]:!rounded-[5px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-border [&_.maplibregl-ctrl-group]:!shadow-[0_1px_8px_#001f1a66]"
+      className={
+        hero
+          ? "relative h-svh min-h-[520px] overflow-hidden bg-[#030207] [&_.maplibregl-ctrl-top-right]:!top-auto [&_.maplibregl-ctrl-top-right]:!bottom-[150px] [&_.maplibregl-ctrl-top-right]:!right-[10px] max-[760px]:[&_.maplibregl-ctrl-top-right]:!bottom-[190px] [&_.maplibregl-ctrl-group]:!rounded-[8px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-violet-300/15 [&_.maplibregl-ctrl-group]:!bg-[#0d0918]/90 [&_.maplibregl-ctrl-group_button_span]:invert"
+          : "relative h-[clamp(430px,55vw,640px)] overflow-hidden rounded-[16px] bg-[#05060f] shadow-[0_22px_55px_-38px_#000] max-[760px]:h-[370px] [&_.maplibregl-ctrl-top-right]:!top-[14px] [&_.maplibregl-ctrl-top-right]:!right-[10px] [&_.maplibregl-ctrl-group]:!rounded-[5px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-white/10 [&_.maplibregl-ctrl-group]:!shadow-[0_1px_8px_#0006]"
+      }
       aria-label="Map of the selected address"
     >
       <div ref={container} className="absolute inset-0 h-full w-full" />
-      <div className="absolute top-5 left-[18px] flex items-center gap-[7px] rounded bg-card/95 px-3 py-2.5 text-[8px] font-semibold tracking-[1.2px] text-card-foreground">
-        <span className="size-[5px] rounded-full bg-primary" /> KING COUNTY,
-        WASHINGTON
-      </div>
       <div
-        className="absolute top-[58px] left-[18px] flex gap-1 rounded-md bg-card/95 p-1 shadow-[0_2px_8px_#001f1a33]"
-        aria-label="Hazard map layers"
+        className={`absolute left-[18px] flex flex-col items-start gap-2 ${hero ? "bottom-[112px] max-[760px]:bottom-[150px]" : "top-5"} ${fadeIn}`}
       >
-        {(["flood", "heat", "ground_motion"] as const).map((layer) => (
-          <button
-            key={layer}
-            className={`rounded px-2 py-1.5 text-[8px] font-medium transition-colors ${activeLayer === layer ? "bg-primary text-primary-foreground" : "text-card-foreground hover:bg-muted"}`}
-            type="button"
-            onClick={() => setActiveLayer(layer)}
-          >
-            {LAYER_NAMES[layer]}
-          </button>
-        ))}
-      </div>
-      {report && (
         <div
-          className="absolute top-[100px] left-[18px] max-w-[min(320px,calc(100%-90px))] rounded-md bg-card/95 px-3 py-2 text-[10px] leading-[1.5] text-card-foreground shadow-[0_2px_8px_#001f1a33]"
-          data-testid="map-reading"
+          className={`flex items-center gap-[7px] rounded-md px-3 py-2.5 text-[8px] font-semibold tracking-[1.2px] ${GLASS}`}
         >
-          <span className="font-semibold">
-            {LAYER_NAMES[activeLayer]} at this pin:
-          </span>{" "}
-          {finding(report.hazards[activeLayer], activeLayer).label}
-          {finding(report.hazards[activeLayer], activeLayer).metric
-            ? ` · ${finding(report.hazards[activeLayer], activeLayer).metric}`
-            : ""}
+          <span className="size-[5px] rounded-full bg-primary" /> KING COUNTY,
+          WASHINGTON
         </div>
-      )}
+        {report && (
+          <div
+            className={`max-w-[min(320px,calc(100vw-36px))] rounded-md px-3 py-2 text-[10px] leading-[1.5] ${GLASS}`}
+            data-testid="map-reading"
+          >
+            <span className="font-semibold">
+              {activeLayer === "ground_motion"
+                ? "Movement"
+                : activeLayer === "flood"
+                  ? "Flood"
+                  : "Heat"}{" "}
+              at this pin:
+            </span>{" "}
+            {finding(report.hazards[activeLayer], activeLayer).label}
+            {finding(report.hazards[activeLayer], activeLayer).metric
+              ? ` · ${finding(report.hazards[activeLayer], activeLayer).metric}`
+              : ""}
+          </div>
+        )}
+        <div
+          className={`flex gap-1 rounded-md p-1 ${GLASS}`}
+          aria-label="Hazard map layers"
+        >
+          {(["flood", "heat", "ground_motion"] as const).map((layer) => (
+            <button
+              key={layer}
+              className={`rounded px-2 py-1.5 text-[8px] font-medium transition-colors ${activeLayer === layer ? "bg-primary text-primary-foreground" : "hover:bg-white/10"}`}
+              type="button"
+              onClick={() => setActiveLayer(layer)}
+            >
+              {layer === "ground_motion"
+                ? "Movement"
+                : layer === "flood"
+                  ? "Flood"
+                  : "Heat"}
+            </button>
+          ))}
+        </div>
+      </div>
       {error && (
         <div
-          className="absolute inset-x-[18px] top-[42%] rounded-[5px] bg-card/95 p-[15px] text-center text-xs text-card-foreground"
+          className={`absolute inset-x-[18px] top-[42%] rounded-md p-[15px] text-center text-xs ${GLASS}`}
           role="status"
         >
           The map couldn’t load. You can still read the report.
         </div>
       )}
       <button
-        className="absolute top-[99px] right-[20px] grid size-[29px] place-items-center rounded-[5px] bg-card text-card-foreground shadow-[0_1px_8px_#001f1a66] hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+        className={`absolute right-[20px] grid size-[29px] place-items-center rounded-[8px] disabled:cursor-not-allowed ${hero ? "bottom-[112px] max-[760px]:bottom-[150px]" : "top-[99px]"} ${GLASS} ${fadeIn}`}
         type="button"
         aria-label="Recenter map"
         disabled={!ready}
         onClick={() =>
           map.current?.flyTo({
-            center: report ? [report.lon, report.lat] : [-121.95, 47.48],
-            zoom: report ? 14 : 8.3,
+            center: report ? [report.lon, report.lat] : COUNTY_CENTER,
+            zoom: report ? 14 : COUNTY_ZOOM,
             essential: true,
+            ...(hero && { offset: HERO_MARKER_OFFSET }),
           })
         }
       >
-        <LocateFixed size={18} />
+        <LocateFixed size={16} />
       </button>
-      <div className="pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-md bg-card/95 px-[17px] py-[19px] text-card-foreground shadow-[0_3px_18px_#001f1a44] max-[760px]:right-[13px] max-[760px]:bottom-[58px] max-[760px]:left-[13px] max-[760px]:p-3.5">
+      <div
+        className={`pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-xl px-[17px] py-[19px] max-[760px]:right-[13px] max-[760px]:bottom-[58px] max-[760px]:left-[13px] max-[760px]:p-3.5 ${GLASS} ${fadeIn}`}
+      >
         <div className="grid size-[38px] shrink-0 place-items-center">
           {report ? (
             <MapPin size={32} strokeWidth={1} />
@@ -463,7 +504,7 @@ export function HazardMap({
                 ? label || report.address || "Selected point"
                 : "A closer look at the place you call home."}
           </strong>
-          <p className="mt-[5px] text-[10px] leading-[1.5] text-[#c1d3ce] max-[760px]:text-[9px]">
+          <p className="mt-[5px] text-[10px] leading-[1.5] text-[#9aa3c7] max-[760px]:text-[9px]">
             {report
               ? `${formatCoordinate(report.lat)}° N · ${formatCoordinate(Math.abs(report.lon))}° W`
               : "Start with an address. See what satellites observed."}

@@ -7,9 +7,11 @@ import { HaloSearchInput } from "./ui/halo-search";
 export function AddressSearch({
   loading,
   onSearch,
+  onClear,
 }: {
   loading: boolean;
   onSearch: (query: string) => void;
+  onClear?: () => void;
 }) {
   const [address, setAddress] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -128,6 +130,7 @@ export function AddressSearch({
               setSuggestions([]);
               setActiveSuggestion(-1);
               setAddress(value);
+              if (address.trim() && !value.trim()) onClear?.();
               setSuggestionsOpen(true);
               if (
                 value.trim().length < 3 ||
@@ -143,6 +146,7 @@ export function AddressSearch({
             onClear={() => {
               closeSuggestions();
               setAddress("");
+              onClear?.();
             }}
             isLoading={loading}
             loadingText="Finding your place…"
@@ -164,7 +168,7 @@ export function AddressSearch({
             <ul
               id="address-suggestions"
               role="listbox"
-              className="absolute z-30 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-white/25 bg-[#0d443a]/98 p-1.5 text-left text-white shadow-[0_18px_45px_-18px_rgba(0,0,0,0.75)] backdrop-blur-xl"
+              className="absolute z-30 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-violet-300/25 bg-[#0d0918]/98 p-1.5 text-left text-white shadow-[0_18px_45px_-18px_rgba(0,0,0,0.85)] backdrop-blur-xl"
             >
               {suggestions.map((suggestion, index) => (
                 <li
@@ -175,7 +179,7 @@ export function AddressSearch({
                 >
                   <button
                     type="button"
-                    className={`w-full rounded-xl px-4 py-3 text-left text-[12px] leading-5 transition-colors ${index === activeSuggestion ? "bg-[#d8f58e] text-[#123d36]" : "text-white/90 hover:bg-white/12"}`}
+                    className={`w-full rounded-xl px-4 py-3 text-left text-[12px] leading-5 transition-colors ${index === activeSuggestion ? "bg-violet-400 text-[#090511]" : "text-white/90 hover:bg-violet-300/10"}`}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => chooseSuggestion(suggestion)}
                   >
