@@ -1,11 +1,10 @@
 "use client";
 import { fetchJSON } from "@/lib/api";
 import { DEMO_PLACES, parseSearch, reportUrl } from "@/lib/search";
-import { hazardKinds, normalizeReport, type Report } from "@/lib/types";
+import { normalizeReport, type Report } from "@/lib/types";
 import { MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AddressSearch } from "./address-search";
-import { HazardCard } from "./hazard-card";
 import { HazardDashboard } from "./hazard-charts";
 import { HazardMap } from "./hazard-map";
 import { ReportSummary } from "./report-summary";
@@ -33,20 +32,33 @@ export default function ReportExplorer() {
     const controller = new AbortController();
     request.current = controller;
     setSearchId((id) => id + 1);
-    setPlaceName(DEMO_PLACES.find((place) => place.query === text.trim() && !("address" in query))?.label);
+    setPlaceName(
+      DEMO_PLACES.find(
+        (place) => place.query === text.trim() && !("address" in query),
+      )?.label,
+    );
     setReport(null);
     setError("");
     setSummary(null);
     setSummaryError("");
     setSummaryLoading(false);
     setLoading(true);
+    document.getElementById("map")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
     try {
       const result = normalizeReport(
-        await fetchJSON<unknown>(reportUrl(query), { signal: controller.signal }),
+        await fetchJSON<unknown>(reportUrl(query), {
+          signal: controller.signal,
+        }),
       );
       if (controller.signal.aborted) return;
       if (!result.in_king_county) {
-        setError(result.message || "This report covers King County, Washington only. Try an address within the county.");
+        setError(
+          result.message ||
+            "This report covers King County, Washington only. Try an address within the county.",
+        );
         return;
       }
       setReport(result);
@@ -137,9 +149,15 @@ export default function ReportExplorer() {
           </div>
         )}
         <div className={`${focusSection} mt-4 mb-20`} id="report" tabIndex={-1}>
-          <div className="mx-auto mt-1 max-w-[1240px] rounded-2xl border-4 border-accent" id="map" tabIndex={-1}>
+          <div
+            className="mx-auto mt-1 max-w-[1240px] scroll-mt-6 rounded-2xl border-4 border-accent shadow-[0_26px_60px_-30px_rgba(0,47,40,0.72),0_8px_20px_-12px_rgba(0,31,26,0.42)]"
+            id="map"
+            tabIndex={-1}
+          >
             <HazardMap report={report} loading={loading} label={placeName} />
           </div>
+
+          {showReport && <HazardDashboard report={report} loading={loading} />}
 
           {initialState ? (
             <div
@@ -162,19 +180,13 @@ export default function ReportExplorer() {
                 </div>
               )}
 
-              <section className="mx-auto mt-8 max-w-[1240px]" aria-label="Hazard findings">
-                <div className="grid grid-cols-3 gap-[18px] max-[1050px]:grid-cols-1">
-                  {hazardKinds.map((kind) => (
-                    <HazardCard key={kind} kind={kind} hazard={report?.hazards[kind]} loading={loading} />
-                  ))}
-                </div>
-              </section>
-
-              <div id="voice" className={`${focusSection} mx-auto max-w-[1240px]`} tabIndex={-1}>
+              <div
+                id="voice"
+                className={`${focusSection} mx-auto max-w-[1240px]`}
+                tabIndex={-1}
+              >
                 <VoiceControls key={searchId} report={report} />
               </div>
-
-              <HazardDashboard report={report} loading={loading} />
             </>
           ) : null}
         </div>

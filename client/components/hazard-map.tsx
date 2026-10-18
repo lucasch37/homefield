@@ -254,7 +254,9 @@ export function HazardMap({
               instance.resize();
               // Keep the image credit collapsed on phones so it doesn't cover the map.
               if (window.innerWidth < 760) {
-                const credit = container.current?.querySelector(".maplibregl-compact-show");
+                const credit = container.current?.querySelector(
+                  ".maplibregl-compact-show",
+                );
                 credit?.classList.remove("maplibregl-compact-show");
                 credit?.removeAttribute("open");
               }
@@ -413,7 +415,9 @@ export function HazardMap({
           className="absolute top-[100px] left-[18px] max-w-[min(320px,calc(100%-90px))] rounded-md bg-card/95 px-3 py-2 text-[10px] leading-[1.5] text-card-foreground shadow-[0_2px_8px_#001f1a33]"
           data-testid="map-reading"
         >
-          <span className="font-semibold">{LAYER_NAMES[activeLayer]} at this pin:</span>{" "}
+          <span className="font-semibold">
+            {LAYER_NAMES[activeLayer]} at this pin:
+          </span>{" "}
           {finding(report.hazards[activeLayer], activeLayer).label}
           {finding(report.hazards[activeLayer], activeLayer).metric
             ? ` · ${finding(report.hazards[activeLayer], activeLayer).metric}`
@@ -444,8 +448,12 @@ export function HazardMap({
         <LocateFixed size={18} />
       </button>
       <div className="pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-md bg-card/95 px-[17px] py-[19px] text-card-foreground shadow-[0_3px_18px_#001f1a44] max-[760px]:right-[13px] max-[760px]:bottom-[58px] max-[760px]:left-[13px] max-[760px]:p-3.5">
-        <div className="grid size-[38px] shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-          {report ? <MapPin size={20} /> : <Satellite size={21} />}
+        <div className="grid size-[38px] shrink-0 place-items-center">
+          {report ? (
+            <MapPin size={32} strokeWidth={1} />
+          ) : (
+            <Satellite size={32} strokeWidth={1} />
+          )}
         </div>
         <div>
           <strong className="block text-xs leading-[1.5] font-medium max-[760px]:text-[11px]">
