@@ -175,6 +175,27 @@
   color: var(--pn-strong);
 }
 
+.pill-nav[data-items="pill"] .pill-nav__item[aria-current] {
+  background: var(--pn-active-tile, var(--pn-tile));
+  box-shadow: var(--pn-active-rim, var(--pn-tile-rim));
+  color: var(--pn-active-ink, var(--pn-strong));
+}
+
+.pill-nav[data-items="pill"] .pill-nav__item {
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.pill-nav[data-items="pill"] .pill-nav__item:not([aria-current]):hover {
+  background: var(--pn-hover-fill, var(--pn-tile));
+  color: var(--pn-hover-ink, var(--pn-strong));
+}
+
+.pill-nav[data-items="pill"] .pill-nav__item[aria-current]:hover {
+  background: var(--pn-active-hover, var(--pn-active-tile, var(--pn-tile)));
+}
+
 .pill-nav__item:focus-visible,
 .pill-nav__row:focus-visible {
   outline: 2px solid var(--pn-ring);

@@ -71,7 +71,7 @@ export function VoiceControls({ report }: { report: Report | null }) {
   const initialLoading = state === "connecting";
   return (
     <section
-      className="mt-5 flex flex-wrap items-center gap-3.5 rounded-[14px] border border-violet-300/50 bg-[#0d0918] p-[22px] text-card-foreground"
+      className="mt-5 flex flex-wrap items-center gap-3.5 rounded-[14px] border border-violet-300/50 bg-[#0b0614] p-[22px] text-card-foreground"
       aria-label="Ask Grok about this home"
     >
       <div className="flex items-center gap-[11px]">
@@ -89,7 +89,7 @@ export function VoiceControls({ report }: { report: Report | null }) {
       </div>
       <div className="ml-auto flex min-h-11 min-w-[165px] items-center justify-end gap-3 max-[560px]:basis-full">
         {initialLoading ? (
-          <span className="text-[11px] text-violet-200" aria-live="polite">
+          <span className="text-[11px] text-violet-300" aria-live="polite">
             Loading…
           </span>
         ) : (
@@ -101,9 +101,9 @@ export function VoiceControls({ report }: { report: Report | null }) {
           active={active}
           disabled={!report}
           loading={initialLoading}
-          accentColor="#f5f3ff"
-          iconColor="#f5f3ff"
-          background="#6d28d9"
+          accentColor="#ddd3fe"
+          iconColor="#1e1033"
+          background="#c4b5fd"
           size={40}
           reach={8}
           ariaLabel="Ask Grok about this home"
@@ -118,7 +118,7 @@ export function VoiceControls({ report }: { report: Report | null }) {
       </p>
       {status && !status.connected && !error && status.message && (
         <p
-          className="m-0 basis-full rounded-md bg-violet-300/10 px-3 py-2 text-[12px] leading-[1.6] text-violet-200"
+          className="m-0 basis-full rounded-md bg-violet-300/10 px-3 py-2 text-[12px] leading-[1.6] text-violet-300"
           data-testid="grok-status"
         >
           {status.message}

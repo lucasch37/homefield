@@ -10,9 +10,11 @@ const FADE =
 export default function Home() {
   return (
     <main id="main-content" className="relative text-[#eef1ff]">
-      <SpaceBackground />
-
       <DiveProvider>
+        <div className="group-data-[landed=true]/dive:hidden">
+          <SpaceBackground />
+        </div>
+
         <section className="relative flex flex-col items-center min-[1200px]:block min-[1200px]:h-[max(calc(100svh-94px),720px)]">
           <div
             className={`relative z-10 pt-6 text-center min-[1200px]:pt-[2vh] ${FADE}`}
@@ -31,7 +33,7 @@ export default function Home() {
               A clearer picture of flooding, heat, and ground movement. Observed
               from space. Made for the place you live.
             </p>
-            <ExploreButton className="mt-6 inline-flex items-center gap-[18px] rounded-md bg-violet-400 px-5 py-[15px] text-xs font-semibold !text-[#090511] shadow-[0_0_28px_rgba(139,92,246,.32)] transition hover:-translate-y-0.5 hover:bg-violet-300 hover:shadow-[0_0_38px_rgba(167,139,250,.42)]">
+            <ExploreButton className="mt-6 gap-[18px] px-5 py-[15px] text-xs font-semibold">
               Explore an address <ArrowUpRight size={17} />
             </ExploreButton>
           </div>

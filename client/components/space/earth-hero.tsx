@@ -16,7 +16,7 @@ export default function EarthHero({ className }: { className?: string }) {
   const [ready, setReady] = useState(false);
   const [dipped, setDipped] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
-  const { diving, setSceneReady, finishDive } = useDive();
+  const { diving, landed, setSceneReady, finishDive } = useDive();
   const onReady = useCallback(() => {
     setReady(true);
     setSceneReady(true);
@@ -72,6 +72,7 @@ export default function EarthHero({ className }: { className?: string }) {
           animate={visible && !reducedMotion}
           onReady={onReady}
           diving={diving}
+          frozen={landed}
           onDip={onDip}
           onDiveEnd={finishDive}
         />

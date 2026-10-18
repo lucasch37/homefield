@@ -10,7 +10,7 @@ import PillNav from "./ui/pill-nav/pill-nav";
 export function Navbar() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const isReports = pathname === "/reports";
+  const isReports = pathname === "/reports" || pathname === "/compare";
   const isSearch = pathname === "/search";
   const [diveActive, setDiveActive] = useState(false);
 
@@ -31,11 +31,11 @@ export function Navbar() {
         {isReports && (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2 bg-[#171025]"
+            className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2 bg-[#120b1f]"
           />
         )}
         <Link
-          className={`inline-flex items-center text-[27px] font-semibold tracking-normal max-[760px]:text-2xl ${isHome ? "text-[#eef1ff]" : ""} ${isSearch ? "relative isolate before:pointer-events-none before:absolute before:inset-[-8px_-22px] before:-z-10 before:rounded-full before:border before:border-violet-300/15 before:bg-[#171025]/90 before:shadow-[0_8px_24px_-14px_rgba(0,0,0,.9)] before:content-['']" : ""}`}
+          className={`inline-flex items-center text-[27px] font-semibold tracking-normal max-[760px]:text-2xl ${isHome ? "text-[#eef1ff]" : ""} ${isSearch ? "relative isolate before:pointer-events-none before:absolute before:inset-[-8px_-22px] before:-z-10 before:rounded-full before:border before:border-violet-300/15 before:bg-[#120b1f]/90 before:shadow-[0_8px_24px_-14px_rgba(0,0,0,.9)] before:content-['']" : ""}`}
           href="/"
           aria-label="Homefield home"
         >
@@ -49,33 +49,39 @@ export function Navbar() {
               { label: "Reports", href: "/reports" },
             ]}
             linkComponent={Link}
-            activeHref={pathname}
+            activeHref={isReports ? "/reports" : pathname}
             itemStyle="pill"
             surface="solid"
-            hoverEffect="fill"
+            hoverEffect="none"
             indicator="dot"
             onItemClick={() => {}}
-            highlightColor="var(--primary)"
-            highlightTextColor="var(--primary-foreground)"
-            barColor="#171025"
-            textColor="var(--foreground)"
+            highlightColor="#D4C8FE"
+            highlightTextColor="#1E1033"
+            barColor="#07040D"
+            textColor="#B8A9D9"
             size="lg"
             style={{
-              "--pn-tile": "rgba(139, 92, 246, .2)",
-              "--pn-tile-rim":
-                "inset 0 0 0 1px rgba(255,255,255,.17), inset 0 1px 0 rgba(255,255,255,.2), 0 6px 14px -8px #020312",
-              "--pn-edge": "rgba(196, 210, 255, .42)",
-              "--pn-rim": "rgba(255, 255, 255, .24)",
-              "--pn-dot": "var(--primary)",
-              "--pn-row-hover":
-                "color-mix(in srgb, var(--primary) 12%, transparent)",
+              "--pn-tile": "#0B0614",
+              "--pn-tile-rim": "inset 0 0 0 1px #1F1632",
+              "--pn-active-tile": "#C4B5FD",
+              "--pn-active-rim": "inset 0 0 0 1px #DDD3FE",
+              "--pn-active-hover": "#D4C8FE",
+              "--pn-active-ink": "#1E1033",
+              "--pn-hover-fill": "rgba(196, 181, 253, .22)",
+              "--pn-hover-ink": "#DDD3FE",
+              "--pn-edge": "#1F1632",
+              "--pn-rim": "transparent",
+              "--pn-dot": "#1E1033",
+              "--pn-ring": "#DDD3FE",
+              "--pn-pill-shadow": "inset 0 0 0 1px #DDD3FE",
+              "--pn-row-hover": "#120B1F",
             }}
             onMenuToggle={() => {}}
           />
         </div>
         <div className="flex items-center gap-8 text-[13px] max-[840px]:hidden">
           <span
-            className={`flex items-center gap-[7px] whitespace-nowrap max-[840px]:hidden ${isHome ? "text-white/75" : "text-white/75"} ${isSearch ? "relative isolate before:pointer-events-none before:absolute before:inset-[-8px_-18px] before:-z-10 before:rounded-full before:border before:border-violet-300/15 before:bg-[#171025]/90 before:shadow-[0_8px_24px_-14px_rgba(0,0,0,.9)] before:content-['']" : ""}`}
+            className={`flex items-center gap-[7px] whitespace-nowrap max-[840px]:hidden ${isHome ? "text-white/75" : "text-white/75"} ${isSearch ? "relative isolate before:pointer-events-none before:absolute before:inset-[-8px_-18px] before:-z-10 before:rounded-full before:border before:border-violet-300/15 before:bg-[#120b1f]/90 before:shadow-[0_8px_24px_-14px_rgba(0,0,0,.9)] before:content-['']" : ""}`}
           >
             <MapPin size={13} />
             King County, WA

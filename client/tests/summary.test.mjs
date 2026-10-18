@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { writeSummary } from '../lib/summary.ts';
+import { writeComparison, writeSummary } from '../lib/summary.ts';
 import { normalizeReport } from '../lib/types.ts';
 import { classifyGeminiStatus, geminiText, pickGeminiModel } from '../lib/gemini-shared.ts';
 import { classifyXaiStatus, pickTextModel, tokenValue } from '../lib/xai-shared.ts';
 
 const report = normalizeReport(JSON.parse(readFileSync(new URL('./fixtures/carnation.json', import.meta.url), 'utf8')));
 const options = { apiKey: 'test-key', baseUrl: 'https://gemini.test/v1beta', model: 'gemini-flash-latest' };
-const GOOD = 'Satellite radar saw water here on 1 of 281 passes, on December 10, 2025. The ground and roofs averaged 84.7°F on clear summer days. The ground movement data could not tell us anything here. Sign up for King County flood alerts.';
+const GOOD = 'Water reached this spot at least once while satellites were watching, most recently on December 10, 2025, so basements, crawl spaces, and ground-floor rooms are what to think about here. Summer surface heat is typical, averaging 84.7°F on clear days, so it is not a standout concern. Satellites could not measure ground movement here. Before deciding, ask the seller or landlord about past water and sign up for King County flood alerts.';
 
 // Stands in for Gemini's generateContent endpoint; no network calls are made. Each call takes the next reply.
 function mockGemini(...replies) {
@@ -37,10 +37,14 @@ test('Gemini gets fact sentences, not raw JSON, and a faithful reply is used', a
   const [call] = gemini.calls;
   assert.equal(call.url, 'https://gemini.test/v1beta/models/gemini-flash-latest:generateContent');
   assert.equal(call.init.headers['x-goog-api-key'], 'test-key');
-  assert.match(call.body.systemInstruction.parts[0].text, /Use only the FACTS/);
+  const system = call.body.systemInstruction.parts[0].text;
+  assert.match(system, /deciding whether to live at the address/);
+  assert.match(system, /your job is the impact/);
+  assert.match(system, /Use only the FACTS, MEANING, CHECK, and ACTION lines/);
+  assert.match(system, /no legal, insurance, or medical advice/);
   assert.deepEqual(call.body.generationConfig, { thinkingConfig: { thinkingLevel: 'low' } });
   const prompt = call.body.contents[0].parts[0].text;
-  assert.match(prompt, /FACTS:\n- Flood: satellite radar saw water/);
+  assert.match(prompt, /FACTS:\n- Flood: satellite radar saw water.* MEANING: .* CHECK: /);
   assert.doesNotMatch(prompt, /comparison_area|longitude|"status"/);
 });
 
@@ -78,6 +82,25 @@ test('invented numbers twice fall back to the data summary', async () => {
 test('a reply calling the home safe is never shown', async () => {
   const gemini = mockGemini('Satellite radar saw water here on 1 of 281 passes. Otherwise this home is safe and sound. Sign up for King County flood alerts.');
   assert.equal((await writeSummary(report, { ...options, fetch: gemini.fetch })).source, 'data');
+});
+
+test('a comparison uses a faithful Gemini reply and falls back when it computes a difference', async () => {
+  const pair = ['seattle_center', 'sodo'].map((name) => normalizeReport(JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8'))));
+  const reply = 'Surface heat at the Seattle Center spot averaged 91.5°F, while the SODO spot averaged 105.8°F, much hotter than typical. No flooding was observed at either place on satellite passes. Ground movement could not be measured at either place. Satellite observations cannot show that a place is free of hazards.';
+  const good = mockGemini(reply);
+  const accepted = await writeComparison(pair, { ...options, fetch: good.fetch });
+  assert.deepEqual(accepted, { summary: reply, source: 'gemini' });
+  assert.match(good.calls[0].body.systemInstruction.parts[0].text, /Never compute differences/);
+  assert.match(good.calls[0].body.contents[0].parts[0].text, /^PLACES:/);
+
+  const computed = reply.replace('much hotter than typical', '14.3°F hotter');
+  const rejected = await writeComparison(pair, { ...options, fetch: mockGemini(computed).fetch });
+  assert.equal(rejected.source, 'data');
+  assert.match(rejected.summary, /^The satellite record was dry at both places\. Surfaces run much hotter than typical at B, which matters for how hot rooms/);
+  assert.match(rejected.summary, /Before deciding: for A, look at King County flood maps.*; for B, ask about air conditioning, insulation, and shade trees\./);
+  assert.match(good.calls[0].body.systemInstruction.parts[0].text, /trade-offs/);
+  assert.match(good.calls[0].body.contents[0].parts[0].text, /Surface heat:\n- A: .* MEANING: .*\n- B: .* MEANING: .* CHECK: /);
+  assert.match(rejected.note, /comparison is the satellite findings/);
 });
 
 test('an unavailable model switches to one the key can use', async () => {

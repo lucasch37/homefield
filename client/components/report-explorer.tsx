@@ -4,6 +4,7 @@ if (typeof window !== "undefined") {
 }
 import { fetchJSON } from "@/lib/api";
 import { buildFacts } from "@/lib/facts";
+import { reportHeadline } from "@/lib/hazards";
 import { saveReport } from "@/lib/saved-reports";
 import { DEMO_PLACES, parseSearch, reportUrl } from "@/lib/search";
 import { normalizeReport, type Report } from "@/lib/types";
@@ -17,7 +18,10 @@ import { usePrefersReducedMotion } from "./space/use-reduced-motion";
 import { showPolishedToast } from "./ui/halo-toast";
 import { VoiceControls } from "./voice-controls";
 
-const PANEL_DELAY_MS = 250;
+const PANEL_DELAY_MS = 400;
+// Safety caps, in case the map is slow or fails: lift the arrival veil, then start the avatar shader.
+const VEIL_CAP_MS = 1800;
+const INTRO_CAP_MS = 6000;
 type Summary = { summary: string; source?: "gemini" | "data"; note?: string };
 
 function shortSummary(text: string): string {
@@ -56,6 +60,8 @@ export default function ReportExplorer() {
   });
   const intro = arrivedByDive && !reducedMotion;
   const [panelIn, setPanelIn] = useState(!intro);
+  const [veil, setVeil] = useState(intro);
+  const [introDone, setIntroDone] = useState(!intro);
   const [replayIntro, setReplayIntro] = useState(0);
   const mountedOnce = useRef(false);
 
@@ -71,13 +77,25 @@ export default function ReportExplorer() {
     mountedOnce.current = true;
     if (firstMount || !flagged || reducedMotion) return;
     setPanelIn(false);
+    setVeil(true);
+    setIntroDone(false);
     setReplayIntro((n) => n + 1);
   }, [reducedMotion]);
   useEffect(() => {
-    if (panelIn) return;
+    if (!veil) return;
+    const timer = window.setTimeout(() => setVeil(false), VEIL_CAP_MS);
+    return () => window.clearTimeout(timer);
+  }, [veil]);
+  useEffect(() => {
+    if (introDone) return;
+    const timer = window.setTimeout(() => setIntroDone(true), INTRO_CAP_MS);
+    return () => window.clearTimeout(timer);
+  }, [introDone]);
+  useEffect(() => {
+    if (panelIn || veil) return;
     const timer = window.setTimeout(() => setPanelIn(true), PANEL_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [panelIn]);
+  }, [panelIn, veil]);
   useEffect(() => () => request.current?.abort(), []);
   useEffect(() => {
     if (!error) return;
@@ -153,11 +171,13 @@ export default function ReportExplorer() {
       const fallback =
         facts.hazards.find((hazard) => hazard.key === facts.lead)?.finding ||
         "Satellite observations are available for this location.";
+      const headline = reportHeadline(result);
       saveReport({
         address: label,
         query: text.trim(),
         summary: shortSummary(fallback),
         savedAt,
+        ...headline,
       });
       setLoading(false);
       requestAnimationFrame(revealReport);
@@ -176,6 +196,7 @@ export default function ReportExplorer() {
             query: text.trim(),
             summary: shortSummary(resultSummary.summary),
             savedAt,
+            ...headline,
           });
         }
       } catch (err) {
@@ -207,6 +228,10 @@ export default function ReportExplorer() {
       id="main-content"
       className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] -mt-[94px] w-screen overflow-hidden bg-background text-foreground max-[760px]:-mt-[77px]"
     >
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none fixed inset-0 z-50 bg-black transition-opacity duration-700 ease-out ${veil ? "opacity-100" : "opacity-0"}`}
+      />
       <section className="relative" aria-label="Find an address">
         <HazardMap
           report={report}
@@ -217,11 +242,13 @@ export default function ReportExplorer() {
           replayIntro={replayIntro}
           resetView={mapResets}
           chromeIn={panelIn}
+          onIntroReady={() => setVeil(false)}
+          onIntroDone={() => setIntroDone(true)}
         />
         <div
-          className={`absolute top-[calc(94px+clamp(16px,4vh,44px))] left-1/2 z-10 w-[min(960px,calc(100%-32px))] -translate-x-1/2 rounded-[28px] border border-violet-300/15 bg-[#0b0714]/80 px-[clamp(18px,3vw,36px)] pt-[clamp(18px,3vh,30px)] pb-[clamp(14px,2vh,22px)] text-[#eef1ff] shadow-[0_30px_80px_-30px_rgba(0,0,0,.9)] backdrop-blur-xl max-[760px]:top-[calc(77px+clamp(16px,4vh,44px))] ${panelIn ? "translate-y-0 opacity-100 transition-[opacity,translate] duration-500 ease-out" : "pointer-events-none translate-y-3 opacity-0"}`}
+          className={`absolute top-[calc(94px+clamp(16px,4vh,44px))] left-1/2 z-10 w-[min(960px,calc(100%-32px))] -translate-x-1/2 rounded-[28px] border border-violet-300/15 bg-[#07040d]/80 px-[clamp(18px,3vw,36px)] pt-[clamp(18px,3vh,30px)] pb-[clamp(14px,2vh,22px)] text-[#eef1ff] shadow-[0_30px_80px_-30px_rgba(0,0,0,.9)] backdrop-blur-xl max-[760px]:top-[calc(77px+12px)] max-[760px]:rounded-[22px] max-[760px]:px-4 max-[760px]:pt-4 max-[760px]:pb-3 ${panelIn ? "translate-y-0 opacity-100 transition-[opacity,translate] duration-500 ease-out" : "pointer-events-none translate-y-3 opacity-0"}`}
         >
-          <h1 className="mb-[clamp(14px,2.4vh,24px)] py-4 text-center font-serif text-[clamp(34px,3.6vw,54px)] font-normal leading-[1.06] tracking-[-2px] max-[760px]:text-[34px] max-[760px]:tracking-[-1.2px]">
+          <h1 className="mb-[clamp(14px,2.4vh,24px)] py-4 text-center font-serif text-[clamp(34px,3.6vw,54px)] font-normal leading-[1.06] tracking-[-2px] max-[760px]:mb-3 max-[760px]:py-1 max-[760px]:text-[28px] max-[760px]:tracking-[-1px]">
             See your home from{" "}
             <em className="font-normal text-violet-300">above.</em>
           </h1>
@@ -230,6 +257,7 @@ export default function ReportExplorer() {
               loading={loading}
               onSearch={search}
               onClear={clear}
+              shader={introDone}
             />
           </section>
         </div>
@@ -261,7 +289,7 @@ export default function ReportExplorer() {
 
             {initialState ? (
               <div
-                className="mx-auto mt-10 flex min-h-[320px] max-w-[1240px] flex-col items-center justify-center gap-3 rounded-[22px] border border-violet-300/15 bg-[#0d0918]/70 px-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,.06)] backdrop-blur-md"
+                className="mx-auto mt-10 flex min-h-[320px] max-w-[1240px] flex-col items-center justify-center gap-3 rounded-[22px] border border-violet-300/15 bg-[#0b0614]/70 px-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,.06)] backdrop-blur-md"
                 aria-label="Report placeholder"
               >
                 <p className="m-0 text-xs text-slate-400">
