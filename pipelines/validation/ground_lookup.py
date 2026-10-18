@@ -7,6 +7,14 @@ Look up 2016-2025 ground motion for one location from ground_motion.tif + ground
 Values are line-of-sight (toward/away from the satellite), mostly vertical for this geometry.
 Negative = moving away from the satellite, consistent with sinking.
 """
+
+# Support both `python -m pipelines...` and running this file directly.
+if __package__ in {None, ""}:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import json
 import os
 import warnings

@@ -12,7 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Vendored Draco decoder copied from three.
+    // Generated from maplibre-gl by scripts/prepare-map-worker.mjs.
+    "public/maplibre-worker.mjs",
+    // Vendored Draco decoder runtime.
     "public/draco/**",
   ]),
 ]);
