@@ -107,7 +107,8 @@
 .hfd-cardHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .hfd-cardHeader h3 { color: #f3f7f2; display: flex; align-items: center; gap: 9px; min-width: 0; margin: 0; font-size: 11px; font-weight: 550; letter-spacing: -.15px; }
 .hfd-icon { display: grid; place-items: center; width: 27px; height: 27px; color: #c4df85; }
-.hfd-card:focus-within { z-index: 10; }
+.hfd-card:focus-within,
+.hfd-card:has(.hfd-sourcePopover) { z-index: 10; }
 .hfd-metric { display: flex; align-items: baseline; gap: 7px; font-size: clamp(30px, 3vw, 40px); font-weight: 550; letter-spacing: -1.8px; line-height: 1.12; font-variant-numeric: tabular-nums; }
 .hfd-metric > span { font-size: 12px; font-weight: 400; letter-spacing: -.2px; color: #7b897e; }
 .hfd-caption { margin: 6px 0 0; font-size: 10px; color: #7b897e; line-height: 1.6; }
