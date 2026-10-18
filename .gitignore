@@ -1,10 +1,26 @@
+# Raw satellite downloads and intermediate caches stay on the data team's machines
 dswx_wtr/
 heat_cache/
 ground_cache/
-.venv*/
-*.log
 *.npz
-.DS_Store
+
+# Python
+.venv*/
 __pycache__/
-.vscode/
+
+# Node and Next.js build output (never commit these)
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local secrets and editor settings
 .env*
+!.env.example
+.vscode/
+settings.json
+
+# Misc
+*.log
+.DS_Store

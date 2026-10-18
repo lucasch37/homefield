@@ -27,13 +27,15 @@ export type Hazard = {
   series_mm?: Displacement[];
   sign_convention_verified?: boolean;
 };
-export type Report = { address: string; lat: number; lon: number; in_king_county: true; hazards: Record<HazardKind, Hazard>; message?: string };
-export type OutsideCountyReport = { address: string; lat: number; lon: number; in_king_county: false; hazards: null; message?: string };
+// Coordinate lookups have no street address, so address may be null.
+export type Report = { address: string | null; lat: number; lon: number; in_king_county: true; hazards: Record<HazardKind, Hazard>; message?: string };
+export type OutsideCountyReport = { address: string | null; lat: number; lon: number; in_king_county: false; hazards: null; message?: string };
 export type ReportResult = Report | OutsideCountyReport;
 export const hazardKinds: HazardKind[] = ["flood", "heat", "ground_motion"];
 
 const record = (value: unknown): Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+const address = (value: unknown): string | null => typeof value === "string" && value.trim() ? value.trim().slice(0, 300) : null;
 const statuses: Record<HazardKind, string[]> = {
   flood: ["flooded", "no_flooding_seen", "permanent_water", "not_enough_data", "error"],
   heat: ["ok", "not_enough_data", "error", "not_available"],
@@ -92,9 +94,9 @@ export function normalizeReport(value: unknown): ReportResult {
   const message = typeof raw.message === "string" && raw.message.trim() ? raw.message : undefined;
   if (raw.in_king_county === false) {
     if (!finite(raw.lat) || !finite(raw.lon) || Math.abs(raw.lat) > 90 || Math.abs(raw.lon) > 180) throw new Error("The report service returned an incomplete location. Please try again.");
-    return { address: typeof raw.address === "string" ? raw.address : "", lat: raw.lat, lon: raw.lon, in_king_county: false, hazards: null, ...(message ? { message } : {}) };
+    return { address: address(raw.address), lat: raw.lat, lon: raw.lon, in_king_county: false, hazards: null, ...(message ? { message } : {}) };
   }
-  if (raw.in_king_county !== true || typeof raw.address !== "string" || !finite(raw.lat) || !finite(raw.lon) || Math.abs(raw.lat) > 90 || Math.abs(raw.lon) > 180) throw new Error("The report service returned an incomplete location. Please try again.");
+  if (raw.in_king_county !== true || (raw.address !== null && raw.address !== undefined && typeof raw.address !== "string") || !finite(raw.lat) || !finite(raw.lon) || Math.abs(raw.lat) > 90 || Math.abs(raw.lon) > 180) throw new Error("The report service returned an incomplete location. Please try again.");
   const hazards = record(raw.hazards);
-  return { address: raw.address, lat: raw.lat, lon: raw.lon, in_king_county: true, hazards: Object.fromEntries(hazardKinds.map(kind => [kind, normalizeHazard(hazards[kind], kind)])) as Report["hazards"], ...(message ? { message } : {}) };
+  return { address: address(raw.address), lat: raw.lat, lon: raw.lon, in_king_county: true, hazards: Object.fromEntries(hazardKinds.map(kind => [kind, normalizeHazard(hazards[kind], kind)])) as Report["hazards"], ...(message ? { message } : {}) };
 }

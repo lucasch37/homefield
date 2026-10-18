@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/prepare-map-worker.mjs && next dev",
-    "build": "node scripts/prepare-map-worker.mjs && next build --webpack",
+    "build": "node scripts/prepare-map-worker.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "node scripts/prepare-map-worker.mjs",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:integration": "node --experimental-strip-types tests/verify-integration.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

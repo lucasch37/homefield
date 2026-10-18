@@ -158,3 +158,11 @@ def test_empty_percentiles_leave_comparison_unknown(prepared_data):
     path.write_text(json.dumps(stats))
     result = RasterLayers(prepared_data).lookup("heat", 47.664, -121.92)
     assert result.status == "ok" and result.lowland_percentile is None
+
+
+def test_ground_motion_reports_tenths_of_a_millimeter(prepared_data):
+    write_pixel(prepared_data / "ground_motion" / "ground_motion.tif", [-18.502519607543945, 1, -0.04, -83.4503173828125])
+    result = RasterLayers(prepared_data).lookup("ground_motion", 47.664, -121.92)
+    assert result.velocity_mm_per_yr == -18.5
+    assert [point.mm for point in result.series_mm] == [0.0, -83.5]
+    assert str(result.series_mm[0].mm) == "0.0"
