@@ -22,6 +22,7 @@ Open http://localhost:3000/search. The "Try a place" links include the demo poin
 | `GEMINI_API_KEY` | Written summary | Server only. Without it, the summary is written straight from the data. |
 | `GEMINI_MODEL` | Written summary | Optional. Defaults to `gemini-flash-latest`; if the model isn't available, another Gemini Flash model is used. |
 | `XAI_API_KEY` | Grok Voice | Server only. Without it, voice says it isn't connected. |
+| `NEXT_PUBLIC_ZILLOW_AFFILIATE_PARAMS`, `NEXT_PUBLIC_REDFIN_AFFILIATE_PARAMS` | Partner links | Optional query string added to the Zillow/Redfin links (your partner ID). Defaults to Homefield UTM tags. Set before `pnpm build`. |
 | `GEMINI_BASE_URL`, `XAI_BASE_URL`, `XAI_REALTIME_URL` | Tests only | Point the app at local stand-ins. Leave unset in production. |
 
 The Gemini and xAI variables can also live in the repository-root `.env`; values in `client/.env.local` or the real environment win. Restart the app after changing them.
@@ -37,6 +38,7 @@ The Gemini and xAI variables can also live in the repository-root `.env`; values
 - `/api/report` forwards `?address=` or `?lat=&lon=` to FastAPI `/hazards` and normalizes each hazard on its own, so one broken layer only affects its card.
 - `/api/summary` turns the report into fixed fact sentences (`lib/facts.ts`), asks Gemini (low thinking, about 2 to 3 seconds) to reword them, and rejects any reply that adds a number, uses the word "safe", or runs long, after one corrective retry. If Gemini is missing, slow, or fails that check, the summary is the fact sentences themselves, labeled "From the satellite data".
 - `/api/voice-token` creates a 5-minute xAI token (same-origin requests only). The browser streams microphone PCM to Grok Voice; when Grok calls `get_hazards`, the browser answers with the same fact sentences, or looks up another address the user names.
+- After a search with a street address, Zillow and Redfin links appear on the map's address card, next to the coordinates. Zillow opens its search for that exact address (`/homes/<address>_rb/`). Redfin has no address search URL, so `/api/listing-link` asks Redfin's location lookup for the home's page and redirects there, or to the ZIP code's page if the lookup fails. Coordinate searches show no links.
 - Every number on the cards, charts, summary, and voice answers comes from the `/hazards` response; tests check this against real responses in `tests/fixtures/`.
 
 ## Check
