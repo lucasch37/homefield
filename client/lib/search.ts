@@ -17,17 +17,19 @@ export function parseSearch(text: string): SearchQuery | null {
 }
 
 export function reportUrl(query: SearchQuery): string {
-  const params = "address" in query
-    ? new URLSearchParams({ address: query.address })
-    : new URLSearchParams({ lat: String(query.lat), lon: String(query.lon) });
+  const params =
+    "address" in query
+      ? new URLSearchParams({ address: query.address })
+      : new URLSearchParams({ lat: String(query.lat), lon: String(query.lon) });
   return `/api/report?${params}`;
 }
 
-/** Validated points from the PRD and data-team checks, searched by coordinates so the demo doesn't
- * depend on the geocoder. Labels describe the place; the hazard results always come from the API. */
+/** Familiar King County places for quickly filling the search field. Coordinate examples are
+ * validated points from the PRD and data-team checks; address examples use normal geocoding. */
 export const DEMO_PLACES: { label: string; query: string }[] = [
   { label: "Seattle Center", query: "400 Broad St, Seattle, WA 98109" },
   { label: "Carnation valley floor", query: "47.664, -121.92" },
+  { label: "Fall City", query: "3608 324th Ave SE, Fall City, WA 98024" },
   { label: "SODO, Seattle", query: "47.58, -122.335" },
   { label: "Discovery Park", query: "47.66, -122.42" },
   { label: "UW, Union Bay", query: "47.65626, -122.2981" },

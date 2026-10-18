@@ -26,7 +26,7 @@ import {
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "./ui/chart";
 import { formatDate, formatNumber, yearSpan } from "@/lib/format";
-import type { Hazard, HazardKind, Report } from "@/lib/types";
+import type { Hazard, Report } from "@/lib/types";
 import {
   PopoverBody,
   PopoverCloseButton,
@@ -39,32 +39,64 @@ import "./hazard-dashboard.css";
 
 const green = "#164e3e";
 const lime = "#c4df85";
-const alertBright = "#ffb0a2";
-const alertMid = "#d96f73";
-const alertMuted = "#b85d64";
-const alertDark = "#842d36";
 const finite = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
+type Severity = "good" | "average" | "hazardous" | "critical" | "unknown";
+const severityPalette: Record<Severity, { bright: string; chart: string; dark: string }> = {
+  good: { bright: "#d8f58e", chart: "#5ca87d", dark: "#174d3a" },
+  average: { bright: "#ffe06b", chart: "#c7a846", dark: "#5a4b20" },
+  hazardous: { bright: "#ffc078", chart: "#d77b3e", dark: "#693a23" },
+  critical: { bright: "#ff9b91", chart: "#d96f73", dark: "#842d36" },
+  unknown: { bright: "#c8e6d0", chart: "#668f7b", dark: "#214b3e" },
+};
+const severityColor = (severity: Severity) => severityPalette[severity].bright;
+const floodSeverity = (hazard?: Hazard): Severity => {
+  if (!hazard || ["error", "not_enough_data", "not_available"].includes(hazard.status)) return "unknown";
+  if (hazard.status === "permanent_water") return "critical";
+  if (hazard.status === "no_flooding_seen") return "good";
+  if (!finite(hazard.observed_passes) || !finite(hazard.wet_passes)) return "unknown";
+  const ratio = hazard.wet_passes / hazard.observed_passes;
+  if (ratio < 0.05) return "average";
+  if (ratio < 0.5) return "hazardous";
+  return "critical";
+};
+const heatSeverity = (hazard?: Hazard): Severity => {
+  const percentile = hazard?.lowland_percentile ?? hazard?.county_percentile;
+  if (!finite(percentile) || hazard?.status !== "ok") return "unknown";
+  if (percentile < 50) return "good";
+  if (percentile < 75) return "average";
+  if (percentile < 90) return "hazardous";
+  return "critical";
+};
+const groundSeverity = (hazard?: Hazard): Severity => {
+  const value = hazard?.velocity_mm_per_yr;
+  if (!finite(value) || hazard?.status !== "ok") return "unknown";
+  const magnitude = Math.abs(value);
+  if (magnitude <= 5) return "good";
+  if (magnitude <= 10) return "average";
+  if (magnitude <= 20) return "hazardous";
+  return "critical";
+};
+function SeverityScale() {
+  return (
+    <div className="hfd-severityScale" aria-label="Hazard severity scale">
+      {(["good", "average", "hazardous", "critical"] as const).map((level) => (
+        <span key={level}>
+          <i style={{ background: severityColor(level) }} />
+          {level[0].toUpperCase() + level.slice(1)}
+        </span>
+      ))}
+    </div>
+  );
+}
 const available = (hazard?: Hazard) =>
   !!hazard &&
   !["error", "not_available", "not_enough_data"].includes(hazard.status);
-const hasHazardSignal = (hazard: Hazard | undefined, kind: HazardKind) => {
-  if (!hazard) return false;
-  if (kind === "flood") return hazard.status === "flooded";
-  if (kind === "heat") {
-    if (hazard.status !== "ok") return false;
-    // The data team's "hotter than most of lowland King County" band starts at the 70th percentile.
-    if (finite(hazard.lowland_percentile)) return hazard.lowland_percentile >= 70;
-    return finite(hazard.recent_relative_f) && hazard.recent_relative_f > 0;
-  }
-  return false;
-};
-
 function Card({
   title,
   icon: Icon,
   source,
-  alert,
+  severity = "unknown",
   children,
   wide = false,
   loading,
@@ -72,20 +104,20 @@ function Card({
   title: string;
   icon: LucideIcon;
   source?: Hazard;
-  alert?: boolean;
+  severity?: Severity;
   children: ReactNode;
   wide?: boolean;
   loading: boolean;
 }) {
   return (
     <article
-      className={`hfd-card ${wide ? "hfd-wide" : ""} ${alert ? "hfd-alert" : ""}`}
+      className={`hfd-card hfd-tone-${severity} ${wide ? "hfd-wide" : ""}`}
       aria-label={title}
       aria-busy={loading}
     >
       <header className="hfd-cardHeader">
         <h3>
-          <span className="hfd-icon">
+          <span className="hfd-icon" style={{ color: severityColor(severity) }}>
             <Icon size={15} strokeWidth={1.7} />
           </span>
           {title}
@@ -199,7 +231,7 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
     wet > passes
   )
     return <Empty hazard={hazard} />;
-  const alert = hasHazardSignal(hazard, "flood");
+  const tone = severityPalette[floodSeverity(hazard)];
   const wetDates =
     hazard?.first_wet && hazard.last_wet
       ? hazard.first_wet === hazard.last_wet
@@ -231,8 +263,8 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
           >
             <defs>
               <linearGradient id={`bars-${id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={alert ? alertBright : "#a9d291"} />
-                <stop offset="100%" stopColor={alert ? alertMid : "#5ca87d"} />
+                <stop offset="0%" stopColor={tone.bright} />
+                <stop offset="100%" stopColor={tone.chart} />
               </linearGradient>
               <pattern
                 id={`hatch-${id}`}
@@ -244,14 +276,14 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
                 <rect
                   width="5"
                   height="5"
-                  fill={alert ? alertDark : "#174d3a"}
+                  fill={tone.dark}
                 />
                 <line
                   x1="0"
                   y1="0"
                   x2="0"
                   y2="5"
-                  stroke={alert ? alertBright : "#83a98a"}
+                  stroke={tone.bright}
                   strokeWidth="1.5"
                 />
               </pattern>
@@ -270,7 +302,7 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
             />
             <YAxis hide domain={[0, passes]} />
             <Tooltip
-              cursor={{ fill: alert ? alertDark : "#164b38", radius: 8 }}
+              cursor={{ fill: tone.bright, radius: 8 }}
               content={
                 <ChartTooltipContent hideLabel className="hfd-tooltip" />
               }
@@ -280,8 +312,8 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
               radius={[7, 7, 0, 0]}
               isAnimationActive={false}
               activeBar={{
-                fill: alert ? alertMid : "#7db78a",
-                stroke: alert ? alertBright : lime,
+                fill: tone.bright,
+                stroke: "#ffffff",
                 strokeWidth: 2,
               }}
             >
@@ -290,7 +322,7 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
               <LabelList
                 position="top"
                 dataKey="passes"
-                fill={alert ? alertBright : lime}
+                fill={tone.bright}
                 fontSize={11}
                 fontWeight={600}
                 offset={9}
@@ -315,7 +347,7 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
     wet > passes
   )
     return <Empty hazard={hazard} />;
-  const alert = hasHazardSignal(hazard, "flood");
+  const tone = severityPalette[floodSeverity(hazard)];
   // The ring's arc is drawn from the API's two counts; only those counts are printed.
   const share = wet / passes;
   const circumference = 2 * Math.PI * 67;
@@ -334,7 +366,7 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
               cy="90"
               r="67"
               fill="none"
-              stroke={alert ? "#8f3b43" : "#285b43"}
+              stroke={tone.dark}
               strokeWidth="10"
             />
             <circle
@@ -342,7 +374,7 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
               cy="90"
               r="67"
               fill="none"
-              stroke={alert ? alertBright : lime}
+              stroke={tone.bright}
               strokeWidth="10"
               strokeLinecap={share ? "round" : "butt"}
               strokeDasharray={`${circumference * share} ${circumference}`}
@@ -359,14 +391,14 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
         </div>
         <div className="hfd-legendRow">
           <span>
-            <i style={{ background: alert ? alertBright : lime }} />
+            <i style={{ background: tone.bright }} />
             Wet passes
           </span>
           <strong>{wet.toLocaleString()}</strong>
         </div>
         <div className="hfd-legendRow">
           <span>
-            <i style={{ background: alert ? alertMuted : "#83a98a" }} />
+            <i style={{ background: tone.chart }} />
             Valid passes
           </span>
           <strong>{passes.toLocaleString()}</strong>
@@ -393,7 +425,7 @@ function HeatGauge({ hazard }: { hazard?: Hazard }) {
         text="A relative heat percentile wasn’t provided for this location."
       />
     );
-  const alert = hasHazardSignal(hazard, "heat");
+  const tone = severityPalette[heatSeverity(hazard)];
   return (
     <>
       <div className="hfd-chartPanel hfd-gaugePanel">
@@ -414,13 +446,7 @@ function HeatGauge({ hazard }: { hazard?: Hazard }) {
                   x2={(130 + Math.cos(angle) * 109).toFixed(3)}
                   y2={(124 + Math.sin(angle) * 109).toFixed(3)}
                   stroke={
-                    (i / 24) * 100 < percentile
-                      ? alert
-                        ? alertBright
-                        : lime
-                      : alert
-                        ? "#8f3b43"
-                        : "#285b43"
+                    (i / 24) * 100 < percentile ? tone.bright : tone.dark
                   }
                   strokeWidth="8"
                   strokeLinecap="round"
@@ -481,6 +507,15 @@ function GroundMotion({ hazard }: { hazard?: Hazard }) {
               {formatNumber(value)}
               <span>mm / year</span>
             </div>
+            <div className="hfd-groundVisual" role="img" aria-label={`Ground movement magnitude ${Math.abs(value).toFixed(1)} millimeters per year`}>
+              <div className="hfd-groundMeter">
+                <span className="hfd-groundMarker" style={{ left: `${Math.min((Math.abs(value) / 20) * 100, 100)}%`, color: severityColor(groundSeverity(hazard)) }}>
+                  <Activity size={20} strokeWidth={2} />
+                </span>
+              </div>
+              <div className="hfd-groundScale" aria-hidden="true"><span>0</span><span>5</span><span>10</span><span>20+</span></div>
+              <p className="hfd-groundBand">{groundSeverity(hazard)[0].toUpperCase() + groundSeverity(hazard).slice(1)} measured movement</p>
+            </div>
             {plotted >= 2 ? (
               <ChartContainer
                 config={{ mm: { label: "Cumulative movement (mm)", color: lime } }}
@@ -514,9 +549,9 @@ function GroundMotion({ hazard }: { hazard?: Hazard }) {
                   <Line
                     type="monotone"
                     dataKey="mm"
-                    stroke={lime}
+                    stroke={severityColor(groundSeverity(hazard))}
                     strokeWidth={2}
-                    dot={{ r: 2.5, fill: lime }}
+                    dot={{ r: 2.5, fill: severityColor(groundSeverity(hazard)) }}
                     connectNulls={false}
                     isAnimationActive={false}
                   />
@@ -558,6 +593,7 @@ function HeatHistory({ hazard }: { hazard?: Hazard }) {
         text="Year-by-year heat readings weren’t available for this spot."
       />
     );
+  const tone = severityPalette[heatSeverity(hazard)];
   const recent = hazard?.recent_relative_f;
   const change = hazard?.change_since_early_f;
   const ChangeIcon = finite(change) && change < 0 ? ArrowDownRight : ArrowUpRight;
@@ -605,7 +641,7 @@ function HeatHistory({ hazard }: { hazard?: Hazard }) {
             <YAxis hide domain={["auto", "auto"]} />
             <ReferenceLine y={0} stroke="#ffffff55" />
             <Tooltip
-              cursor={{ fill: "#164b38" }}
+              cursor={{ fill: tone.bright }}
               content={
                 <ChartTooltipContent
                   className="hfd-tooltip"
@@ -622,7 +658,7 @@ function HeatHistory({ hazard }: { hazard?: Hazard }) {
               {data.map((point) => (
                 <Cell
                   key={point.year}
-                  fill={finite(point.relative) && point.relative > 0 ? alertBright : "#83c1a0"}
+                  fill={finite(point.relative) && point.relative > 0 ? tone.bright : tone.chart}
                 />
               ))}
             </Bar>
@@ -644,25 +680,20 @@ export function HazardDashboard({
   report: Report | null;
   loading: boolean;
 }) {
-  const floodAlert = hasHazardSignal(report?.hazards.flood, "flood");
-  const heatAlert = hasHazardSignal(report?.hazards.heat, "heat");
-  const groundAlert = hasHazardSignal(
-    report?.hazards.ground_motion,
-    "ground_motion",
-  );
   return (
     <section className="hfd-dashboard" aria-labelledby="dashboard-title">
       <div className="hfd-heading">
         <div>
           <h2 id="dashboard-title">The satellite record</h2>
         </div>
+        <SeverityScale />
       </div>
       <div className="hfd-grid">
         <Card
           title="Satellite pass history"
           icon={Droplets}
           source={report?.hazards.flood}
-          alert={floodAlert}
+          severity={floodSeverity(report?.hazards.flood)}
           loading={loading}
         >
           <FloodPasses hazard={report?.hazards.flood} />
@@ -671,7 +702,7 @@ export function HazardDashboard({
           title="Water detection"
           icon={Waves}
           source={report?.hazards.flood}
-          alert={floodAlert}
+          severity={floodSeverity(report?.hazards.flood)}
           loading={loading}
         >
           <WaterFrequency hazard={report?.hazards.flood} />
@@ -680,7 +711,7 @@ export function HazardDashboard({
           title="Heat in perspective"
           icon={Sun}
           source={report?.hazards.heat}
-          alert={heatAlert}
+          severity={heatSeverity(report?.hazards.heat)}
           loading={loading}
         >
           <HeatGauge hazard={report?.hazards.heat} />
@@ -689,7 +720,7 @@ export function HazardDashboard({
           title="Ground movement"
           icon={Activity}
           source={report?.hazards.ground_motion}
-          alert={groundAlert}
+          severity={groundSeverity(report?.hazards.ground_motion)}
           loading={loading}
         >
           <GroundMotion hazard={report?.hazards.ground_motion} />
@@ -698,7 +729,7 @@ export function HazardDashboard({
           title="Heat over the years"
           icon={Sun}
           source={report?.hazards.heat}
-          alert={heatAlert}
+          severity={heatSeverity(report?.hazards.heat)}
           loading={loading}
           wide
         >
