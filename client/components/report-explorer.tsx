@@ -114,10 +114,6 @@ export default function ReportExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   function revealReport() {
-    // On phones the map already fills the viewport. Let people scroll into the
-    // report themselves instead of making its address card slide away as soon
-    // as the search finishes.
-    if (window.matchMedia("(max-width: 760px)").matches) return;
     const el = reportRef.current;
     if (!el) return;
     const top =

@@ -392,7 +392,7 @@ export function HazardMap({
         <LocateFixed size={16} />
       </button>
       <div
-        className={`pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-xl px-[17px] py-[19px] max-[760px]:right-[13px] max-[760px]:bottom-[max(12px,env(safe-area-inset-bottom))] max-[760px]:left-[13px] max-[760px]:p-3.5 ${hero && !report && !loading ? "max-[760px]:hidden" : ""} ${GLASS} ${fadeIn}`}
+        className={`hfm-addressCard pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-xl px-[17px] py-[19px] max-[760px]:right-[13px] max-[760px]:bottom-[max(12px,env(safe-area-inset-bottom))] max-[760px]:left-[13px] max-[760px]:p-3.5 ${GLASS} ${fadeIn}`}
       >
         <div className="grid size-[38px] shrink-0 place-items-center">
           {report ? (

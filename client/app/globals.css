@@ -122,3 +122,12 @@
     @apply cursor-pointer;
   }
 }
+
+@media (max-width: 760px) {
+  .hfm-addressCard {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: rgb(11 6 20 / 95%);
+    transform: translateZ(0);
+  }
+}
