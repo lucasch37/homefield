@@ -108,7 +108,7 @@ export default function ReportExplorer() {
             aria-label="Find an address"
             tabIndex={-1}
           >
-            <AddressSearch loading={loading} onSearch={search} />
+            <AddressSearch loading={loading} onSearch={search} listingAddress={report?.address} />
           </section>
         </div>
       </section>

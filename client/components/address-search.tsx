@@ -1,15 +1,22 @@
 "use client";
 import { ArrowRight, ArrowUpRight, LoaderCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { affiliateParams, redfinLinkPath, zillowUrl } from "@/lib/listing-links";
 import { DEMO_PLACES } from "@/lib/search";
 import { HaloSearchInput } from "./ui/halo-search";
+
+// Inlined at build time; set these to your affiliate query strings (see lib/listing-links.ts).
+const ZILLOW_PARAMS = affiliateParams(process.env.NEXT_PUBLIC_ZILLOW_AFFILIATE_PARAMS);
 
 export function AddressSearch({
   loading,
   onSearch,
+  listingAddress,
 }: {
   loading: boolean;
   onSearch: (query: string) => void;
+  /** Street address of the current report; partner links appear when there is one. */
+  listingAddress?: string | null;
 }) {
   const [address, setAddress] = useState("400 Broad St, Seattle, WA 98109");
   function submit(event: FormEvent) {
@@ -58,6 +65,27 @@ export function AddressSearch({
           )}
         </button>
       </form>
+      {listingAddress && !loading && (
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-3 max-[760px]:justify-start" data-testid="listing-links">
+          <span className="mr-1 text-[10px] text-muted-foreground">See this home on</span>
+          {[
+            { name: "Zillow", href: zillowUrl(listingAddress, ZILLOW_PARAMS) },
+            { name: "Redfin", href: redfinLinkPath(listingAddress) },
+          ].map((link) => (
+            <a
+              key={link.name}
+              href={link.href}
+              target="_blank"
+              rel="sponsored noopener"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3.5 py-2 text-[11px] font-medium text-white transition-colors hover:border-primary hover:bg-primary hover:text-[var(--primary-foreground)]"
+            >
+              {link.name}
+              <ArrowUpRight size={13} />
+            </a>
+          ))}
+          <span className="basis-full text-right text-[9px] text-muted-foreground max-[760px]:text-left">Partner links. Homefield may earn a commission.</span>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-[15px] pt-3 text-[11px] text-muted-foreground max-[760px]:gap-2.5 max-[760px]:text-[10px]">
         <span>Try a place</span>
         {DEMO_PLACES.map((place) => (
