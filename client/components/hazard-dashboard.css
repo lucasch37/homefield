@@ -69,7 +69,7 @@
 .hfd-ring { display: block; height: 172px; width: 180px; }
 .hfd-ringLabel { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
 .hfd-ringLabel strong { color: #f3f7f2; font-weight: 550; font-size: 35px; line-height: 1; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; }
-.hfd-ringLabel small { font-size: 22px; font-weight: 400; margin-left: 2px; }
+.hfd-ringLabel small { font-size: 16px; font-weight: 400; margin-left: 2px; }
 .hfd-ringLabel > span { font-size: 8px; color: #b5cdbd; }
 .hfd-frequencyPanel .hfd-legendRow { border-color: #ffffff19; }
 .hfd-frequencyPanel .hfd-legendRow > span { color: #c2d4c7; }
@@ -133,3 +133,4 @@
 @media (max-width: 760px) { .hfd-heading { align-items: flex-start; flex-direction: column; gap: 14px; } .hfd-heading h2 { font-size: 30px; max-width: 340px; } .hfd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } .hfd-card { padding: 21px 18px 16px; } .hfd-grid > .hfd-card:nth-child(3) { grid-column: 1; } .hfd-wide { grid-column: 1 / -1; } .hfd-gaugeWrap { margin-top: auto; margin-bottom: auto; } .hfd-gaugeScale { margin-top: 8px; } .hfd-callout { margin-bottom: 15px; } .hfd-ringWrap { width: 160px; } .hfd-ring { width: 160px; } .hfd-source { font-size: 7px; } .hfd-dashboardNote { justify-content: flex-start; } }
 @media (max-width: 480px) { .hfd-grid { grid-template-columns: minmax(0, 1fr); } .hfd-wide { grid-column: auto; } .hfd-card { padding: 23px 24px 18px; } .hfd-cardHeader h3 { font-size: 12px; } .hfd-metric { font-size: 38px; } .hfd-passChart { height: 180px; } .hfd-ringWrap, .hfd-ring { width: 180px; height: 180px; } .hfd-gaugeWrap { max-width: 270px; } .hfd-gaugeLabel > span { font-size: 7px; } .hfd-gaugeLabel strong { color: #f3f7f2; font-size: 34px; } .hfd-comparisonHeading { align-items: flex-start; } .hfd-delta { margin-top: 5px; } .hfd-delta > span { display: none; } .hfd-comparisonChart { height: 155px; } .hfd-source { font-size: 8px; } .hfd-gaugeScale { font-size: 9px; } .hfd-groundBody { min-height: 210px; } }
 @media (prefers-reduced-motion: reduce) { .hfd-card, .hfd-skeleton span { animation: none; transition: none; } }
+.hfd-groundChart { width: 100%; height: 120px; aspect-ratio: auto; margin: 10px 0 0; }

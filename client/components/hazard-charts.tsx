@@ -17,11 +17,15 @@ import {
   CartesianGrid,
   Cell,
   LabelList,
+  Line,
+  LineChart,
+  ReferenceLine,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "./ui/chart";
+import { formatDate, formatNumber, yearSpan } from "@/lib/format";
 import type { Hazard, HazardKind, Report } from "@/lib/types";
 import {
   PopoverBody,
@@ -49,17 +53,11 @@ const hasHazardSignal = (hazard: Hazard | undefined, kind: HazardKind) => {
   if (kind === "flood") return hazard.status === "flooded";
   if (kind === "heat") {
     if (hazard.status !== "ok") return false;
-    if (finite(hazard.recent_relative_f)) return hazard.recent_relative_f > 0;
-    if (finite(hazard.lowland_percentile))
-      return hazard.lowland_percentile > 50;
-    if (finite(hazard.diff_from_median_f)) return hazard.diff_from_median_f > 0;
-    return finite(hazard.county_percentile) && hazard.county_percentile > 50;
+    // The data team's "hotter than most of lowland King County" band starts at the 70th percentile.
+    if (finite(hazard.lowland_percentile)) return hazard.lowland_percentile >= 70;
+    return finite(hazard.recent_relative_f) && hazard.recent_relative_f > 0;
   }
-  return (
-    hazard.status === "ok" &&
-    finite(hazard.velocity_mm_per_yr) &&
-    hazard.velocity_mm_per_yr !== 0
-  );
+  return false;
 };
 
 function Card({
@@ -202,7 +200,12 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
   )
     return <Empty hazard={hazard} />;
   const alert = hasHazardSignal(hazard, "flood");
-  const dry = passes - wet;
+  const wetDates =
+    hazard?.first_wet && hazard.last_wet
+      ? hazard.first_wet === hazard.last_wet
+        ? `Water seen on ${formatDate(hazard.first_wet)}.`
+        : `Water first seen ${formatDate(hazard.first_wet)}, most recently ${formatDate(hazard.last_wet)}.`
+      : null;
   return (
     <>
       <div className="hfd-chartPanel">
@@ -210,15 +213,17 @@ function FloodPasses({ hazard }: { hazard?: Hazard }) {
           {passes.toLocaleString()}
           <span>valid passes</span>
         </div>
-        <p className="hfd-caption">A record of what satellites could see.</p>
+        <p className="hfd-caption" data-testid="flood-dates">
+          {wetDates ?? "A record of what radar satellites could see here."}
+        </p>
         <ChartContainer
           config={{ passes: { label: "Satellite passes", color: green } }}
           className="hfd-passChart"
-          aria-label={`${dry} dry satellite passes and ${wet} wet satellite passes`}
+          aria-label={`${passes} valid satellite passes, ${wet} of them wet`}
         >
           <BarChart
             data={[
-              { name: "Dry passes", passes: dry },
+              { name: "Valid passes", passes },
               { name: "Wet passes", passes: wet },
             ]}
             margin={{ top: 25, right: 22, left: 22, bottom: 0 }}
@@ -311,7 +316,8 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
   )
     return <Empty hazard={hazard} />;
   const alert = hasHazardSignal(hazard, "flood");
-  const percentage = (wet / passes) * 100;
+  // The ring's arc is drawn from the API's two counts; only those counts are printed.
+  const share = wet / passes;
   const circumference = 2 * Math.PI * 67;
   return (
     <>
@@ -321,7 +327,7 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
             className="hfd-ring"
             viewBox="0 0 180 180"
             role="img"
-            aria-label={`Water observed in ${wet} of ${passes} passes, ${percentage.toFixed(1)} percent`}
+            aria-label={`Water observed in ${wet} of ${passes} valid passes`}
           >
             <circle
               cx="90"
@@ -338,17 +344,17 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
               fill="none"
               stroke={alert ? alertBright : lime}
               strokeWidth="10"
-              strokeLinecap={percentage ? "round" : "butt"}
-              strokeDasharray={`${(circumference * percentage) / 100} ${circumference}`}
+              strokeLinecap={share ? "round" : "butt"}
+              strokeDasharray={`${circumference * share} ${circumference}`}
               transform="rotate(-90 90 90)"
             />
           </svg>
           <div className="hfd-ringLabel">
             <strong>
-              {Number(percentage.toFixed(1))}
-              <small>%</small>
+              {wet.toLocaleString()}
+              <small> / {passes.toLocaleString()}</small>
             </strong>
-            <span>of passes saw water</span>
+            <span>passes saw water</span>
           </div>
         </div>
         <div className="hfd-legendRow">
@@ -361,9 +367,9 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
         <div className="hfd-legendRow">
           <span>
             <i style={{ background: alert ? alertMuted : "#83a98a" }} />
-            Dry passes
+            Valid passes
           </span>
-          <strong>{(passes - wet).toLocaleString()}</strong>
+          <strong>{passes.toLocaleString()}</strong>
         </div>
         <p className="hfd-note">
           Observation frequency, not future flood probability.
@@ -374,7 +380,7 @@ function WaterFrequency({ hazard }: { hazard?: Hazard }) {
 }
 
 function HeatGauge({ hazard }: { hazard?: Hazard }) {
-  const percentile = hazard?.lowland_percentile ?? hazard?.county_percentile;
+  const percentile = hazard?.lowland_percentile;
   if (
     !available(hazard) ||
     !finite(percentile) ||
@@ -396,7 +402,7 @@ function HeatGauge({ hazard }: { hazard?: Hazard }) {
             viewBox="0 0 260 155"
             className="hfd-gauge"
             role="img"
-            aria-label={`Surface temperature at county percentile ${percentile}`}
+            aria-label={`Relative surface heat at the ${formatNumber(percentile)} percentile of lowland King County`}
           >
             {Array.from({ length: 25 }, (_, i) => {
               const angle = Math.PI + (i / 24) * Math.PI;
@@ -423,13 +429,9 @@ function HeatGauge({ hazard }: { hazard?: Hazard }) {
             })}
           </svg>
           <div className="hfd-gaugeLabel">
-            <span>
-              {finite(hazard?.lowland_percentile)
-                ? "LOWLAND PERCENTILE"
-                : "COUNTY PERCENTILE"}
-            </span>
+            <span>LOWLAND PERCENTILE</span>
             <strong>
-              {Number(percentile.toFixed(1))}
+              {formatNumber(percentile)}
               <small> / 100</small>
             </strong>
           </div>
@@ -444,29 +446,17 @@ function HeatGauge({ hazard }: { hazard?: Hazard }) {
             {finite(hazard?.recent_relative_f) ? (
               <>
                 <strong>
-                  {Math.abs(hazard.recent_relative_f).toFixed(1)}°F
+                  {formatNumber(Math.abs(hazard.recent_relative_f))}°F
                 </strong>{" "}
                 {hazard.recent_relative_f === 0
-                  ? "at"
+                  ? "same as"
                   : hazard.recent_relative_f > 0
-                    ? "above"
-                    : "below"}{" "}
-                each clear day’s lowland median
-              </>
-            ) : finite(hazard?.diff_from_median_f) ? (
-              <>
-                <strong>
-                  {Math.abs(hazard.diff_from_median_f).toFixed(1)}°F
-                </strong>{" "}
-                {hazard.diff_from_median_f === 0
-                  ? "at"
-                  : hazard.diff_from_median_f > 0
-                    ? "above"
-                    : "below"}{" "}
-                the county median
+                    ? "hotter than"
+                    : "cooler than"}{" "}
+                a typical lowland spot on the same clear days
               </>
             ) : (
-              "Relative to observed land surfaces"
+              "Compared with lowland King County surfaces"
             )}
           </p>
         </div>
@@ -477,21 +467,70 @@ function HeatGauge({ hazard }: { hazard?: Hazard }) {
 
 function GroundMotion({ hazard }: { hazard?: Hazard }) {
   const value = hazard?.velocity_mm_per_yr;
+  const series = (hazard?.series_mm ?? []).map((point) => ({
+    date: point.date,
+    mm: point.mm,
+  }));
+  const plotted = series.filter((point) => finite(point.mm)).length;
   return (
     <>
       <div className="hfd-groundBody">
         {available(hazard) && finite(value) ? (
           <>
             <div className="hfd-metric">
-              {value.toFixed(1)}
+              {formatNumber(value)}
               <span>mm / year</span>
             </div>
-            <div className="hfd-groundSymbol" aria-hidden="true">
-              <Activity size={40} strokeWidth={1} />
-            </div>
+            {plotted >= 2 ? (
+              <ChartContainer
+                config={{ mm: { label: "Cumulative movement (mm)", color: lime } }}
+                className="hfd-groundChart"
+                aria-label={`Cumulative movement from ${formatDate(series[0].date)} to ${formatDate(series[series.length - 1].date)}`}
+              >
+                <LineChart data={series} margin={{ top: 12, right: 8, left: 8, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="#ffffff1c" strokeDasharray="3 4" />
+                  <XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "#c3d4c8", fontSize: 9 }}
+                    tickFormatter={(date: string) => date.slice(0, 4)}
+                    interval="preserveStartEnd"
+                    minTickGap={18}
+                  />
+                  <YAxis hide domain={["auto", "auto"]} />
+                  <ReferenceLine y={0} stroke="#ffffff40" />
+                  <Tooltip
+                    content={
+                      <ChartTooltipContent
+                        className="hfd-tooltip"
+                        labelFormatter={(_, payload) => formatDate(String(payload?.[0]?.payload?.date ?? ""))}
+                        formatter={(v) => (
+                          <span className="hfd-tooltipValue">{formatNumber(Number(v))} mm</span>
+                        )}
+                      />
+                    }
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="mm"
+                    stroke={lime}
+                    strokeWidth={2}
+                    dot={{ r: 2.5, fill: lime }}
+                    connectNulls={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ChartContainer>
+            ) : (
+              <div className="hfd-groundSymbol" aria-hidden="true">
+                <Activity size={40} strokeWidth={1} />
+              </div>
+            )}
             <p className="hfd-note">
-              Measured along the satellite’s line of sight. Direction requires a
-              verified source sign convention.
+              Cumulative movement along the satellite’s slanted line of sight.
+              The sign’s direction hasn’t been verified, so this doesn’t say
+              whether the ground is rising or sinking.
             </p>
           </>
         ) : (
@@ -505,134 +544,93 @@ function GroundMotion({ hazard }: { hazard?: Hazard }) {
   );
 }
 
-function HeatComparison({ hazard }: { hazard?: Hazard }) {
-  const value = hazard?.surface_temp_f;
-  const difference = hazard?.recent_relative_f ?? hazard?.diff_from_median_f;
-  const id = useId().replaceAll(":", "");
-  if (!available(hazard) || !finite(value)) return <Empty hazard={hazard} />;
-  const alert = hasHazardSignal(hazard, "heat");
-  const hasMedian = finite(difference);
-  const median = hasMedian ? value - difference : null;
-  const comparisonLabel = finite(hazard?.recent_relative_f)
-    ? "Daily lowland median"
-    : "County median";
-  const data = [
-    { name: "This address", temperature: value },
-    ...(median !== null
-      ? [{ name: comparisonLabel, temperature: median }]
-      : []),
-  ];
-  const DifferenceIcon =
-    finite(difference) && difference < 0 ? ArrowDownRight : ArrowUpRight;
+function HeatHistory({ hazard }: { hazard?: Hazard }) {
+  const years = hazard?.yearly_relative_f ?? [];
+  const data = years.map((point) => ({
+    year: String(point.year),
+    relative: point.relative_f,
+  }));
+  const plotted = data.filter((point) => finite(point.relative)).length;
+  if (!available(hazard) || plotted < 2)
+    return (
+      <Empty
+        hazard={hazard}
+        text="Year-by-year heat readings weren’t available for this spot."
+      />
+    );
+  const recent = hazard?.recent_relative_f;
+  const change = hazard?.change_since_early_f;
+  const ChangeIcon = finite(change) && change < 0 ? ArrowDownRight : ArrowUpRight;
   return (
     <>
       <div className="hfd-chartPanel hfd-heatPanel">
         <div className="hfd-comparisonHeading">
           <div>
-            <div className="hfd-metric">
-              {value.toFixed(1)}
-              <span>°F</span>
-            </div>
-            <p className="hfd-caption">Ground & roof surface temperature</p>
+            {finite(recent) && (
+              <div className="hfd-metric">
+                {recent > 0 ? "+" : ""}
+                {formatNumber(recent)}
+                <span>°F vs. a typical lowland spot ({yearSpan(hazard?.recent_years)})</span>
+              </div>
+            )}
+            <p className="hfd-caption">
+              Each summer: how much hotter (+) or cooler (−) this spot’s
+              surface ran than a typical lowland King County spot
+            </p>
           </div>
-          {hasMedian && (
+          {finite(change) && hazard?.early_years?.length ? (
             <span className="hfd-delta">
-              <DifferenceIcon size={13} />
-              {difference > 0 ? "+" : ""}
-              {difference.toFixed(1)}°F{" "}
-              <span>
-                {finite(hazard?.recent_relative_f)
-                  ? "vs. lowland"
-                  : "vs. county"}
-              </span>
+              <ChangeIcon size={13} />
+              {change > 0 ? "+" : ""}
+              {formatNumber(change)}°F{" "}
+              <span>since {yearSpan(hazard.early_years)}</span>
             </span>
-          )}
+          ) : null}
         </div>
         <ChartContainer
-          config={{
-            temperature: { label: "Surface temperature (°F)", color: green },
-          }}
+          config={{ relative: { label: "Difference from typical (°F)", color: lime } }}
           className="hfd-comparisonChart"
-          aria-label={`Surface temperature: this address ${value.toFixed(1)} degrees Fahrenheit${median !== null ? `, ${comparisonLabel.toLowerCase()} ${median.toFixed(1)} degrees Fahrenheit` : ", relative comparison unavailable"}`}
+          aria-label={`Yearly surface heat compared with lowland King County, ${data[0].year} to ${data[data.length - 1].year}`}
         >
-          <BarChart
-            data={data}
-            layout="vertical"
-            margin={{ top: 8, right: 56, bottom: 0, left: 0 }}
-            barSize={27}
-          >
-            <defs>
-              <linearGradient id={`heat-${id}`} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor={alert ? alertBright : "#a9d291"} />
-                <stop offset="100%" stopColor={alert ? alertMid : "#5ca87d"} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid
-              horizontal={false}
-              stroke="#ffffff1c"
-              strokeDasharray="3 4"
-            />
+          <BarChart data={data} margin={{ top: 14, right: 6, left: 6, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="#ffffff1c" strokeDasharray="3 4" />
             <XAxis
-              type="number"
+              dataKey="year"
               tickLine={false}
               axisLine={false}
               tick={{ fill: "#c3d4c8", fontSize: 9 }}
-              tickFormatter={(v: number) => `${v}°`}
+              interval="preserveStartEnd"
+              minTickGap={6}
             />
-            <YAxis
-              type="category"
-              dataKey="name"
-              width={90}
-              tickLine={false}
-              axisLine={false}
-              tick={{ fill: "#d7e4da", fontSize: 10 }}
-            />
+            <YAxis hide domain={["auto", "auto"]} />
+            <ReferenceLine y={0} stroke="#ffffff55" />
             <Tooltip
-              cursor={{ fill: alert ? alertDark : "#164b38" }}
+              cursor={{ fill: "#164b38" }}
               content={
                 <ChartTooltipContent
-                  hideLabel
                   className="hfd-tooltip"
                   formatter={(v) => (
                     <span className="hfd-tooltipValue">
-                      {Number(v).toFixed(1)}°F
+                      {Number(v) > 0 ? "+" : ""}
+                      {formatNumber(Number(v))}°F
                     </span>
                   )}
                 />
               }
             />
-            <Bar
-              dataKey="temperature"
-              radius={[0, 5, 5, 0]}
-              isAnimationActive={false}
-              activeBar={{
-                fill: alert ? alertMid : "#7db78a",
-                stroke: alert ? alertBright : lime,
-                strokeWidth: 2,
-              }}
-            >
-              <Cell fill={`url(#heat-${id})`} />
-              <Cell fill={alert ? alertMuted : "#83a98a"} />
-              <LabelList
-                position="right"
-                fill={alert ? alertBright : lime}
-                fontSize={10}
-                fontWeight={600}
-                offset={10}
-                formatter={(v: unknown) =>
-                  finite(v) ? `${v.toFixed(1)}°F` : ""
-                }
-              />
+            <Bar dataKey="relative" radius={[4, 4, 4, 4]} isAnimationActive={false}>
+              {data.map((point) => (
+                <Cell
+                  key={point.year}
+                  fill={finite(point.relative) && point.relative > 0 ? alertBright : "#83c1a0"}
+                />
+              ))}
             </Bar>
           </BarChart>
         </ChartContainer>
         <p className="hfd-note">
-          {hasMedian
-            ? finite(hazard?.recent_relative_f)
-              ? "The comparison uses each clear day’s lowland median."
-              : "County median is calculated from the same observed scenes."
-            : "Relative comparison unavailable."}{" "}
-          Surface temperature is not air or indoor temperature.
+          Ground and roof surface temperature around noon on clear summer days,
+          not air temperature. Years without a clear reading are left blank.
         </p>
       </div>
     </>
@@ -656,7 +654,7 @@ export function HazardDashboard({
     <section className="hfd-dashboard" aria-labelledby="dashboard-title">
       <div className="hfd-heading">
         <div>
-          <h2 id="dashboard-title">The sattelite data</h2>
+          <h2 id="dashboard-title">The satellite record</h2>
         </div>
       </div>
       <div className="hfd-grid">
@@ -697,19 +695,20 @@ export function HazardDashboard({
           <GroundMotion hazard={report?.hazards.ground_motion} />
         </Card>
         <Card
-          title="Surface temperature"
+          title="Heat over the years"
           icon={Sun}
           source={report?.hazards.heat}
           alert={heatAlert}
           loading={loading}
           wide
         >
-          <HeatComparison hazard={report?.hazards.heat} />
+          <HeatHistory hazard={report?.hazards.heat} />
         </Card>
       </div>
       <p className="hfd-dashboardNote">
-        <ScanLine size={13} />A view of the satellite record. Every reading has
-        limits; explore the findings below for context.
+        <ScanLine size={13} />Every chart shows values from the satellite
+        data as returned for this location. Open “Source” for dates,
+        resolution, and limitations.
       </p>
     </section>
   );
