@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const lexend = Lexend({ subsets: ["latin"], variable: "--font-lexend" });
 
 export const metadata: Metadata = {
-  title: "Homefield — A clearer picture of home",
+  title: "homefield — A clearer picture of home",
   description:
     "Explore satellite observations of flooding, surface heat, and slow ground movement at your King County address, with sources and limitations.",
   icons: {

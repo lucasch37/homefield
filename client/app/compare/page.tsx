@@ -1,5 +1,10 @@
 import { ReportCompare } from "@/components/report-compare";
+import { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
 import { Suspense } from "react";
+
+export const metadata: Metadata = {
+  title: "Compare — homefield",
+};
 
 export default function ComparePage() {
   return (

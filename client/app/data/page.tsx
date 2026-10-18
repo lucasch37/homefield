@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 
 export const metadata: Metadata = {
-  title: "Data — Homefield",
+  title: "Data — homefield",
   description:
-    "The NASA-backed satellite observations behind Homefield: Sentinel-1 radar flood maps, Landsat summer heat, and OPERA ground motion.",
+    "The NASA-backed satellite observations behind homefield: Sentinel-1 radar flood maps, Landsat summer heat, and OPERA ground motion.",
 };
 
 type Figure = { src: string; width: number; height: number; alt: string };
@@ -16,7 +16,12 @@ const STATS = [
   { value: "30 m", label: "detail" },
 ];
 
-const SECTIONS: { title: string; text: string; source: string; figures: Figure[] }[] = [
+const SECTIONS: {
+  title: string;
+  text: string;
+  source: string;
+  figures: Figure[];
+}[] = [
   {
     title: "Flood",
     text: "Sentinel-1 radar sees through storm clouds. NASA JPL's OPERA project turns each pass into a water map; we processed all 1,158 passes over King County since September 2024 and recorded, for every 30 m square, how often it was underwater and when.",
@@ -79,11 +84,13 @@ export default function DataPage() {
       <section className="px-[6.3%] max-[1050px]:px-[5%] max-[760px]:px-[6%]">
         <div className="mx-auto max-w-[1240px] pt-16 pb-10 max-[760px]:pt-12">
           <h1 className="font-serif text-[clamp(44px,5.1vw,73px)] font-normal leading-[1.06] tracking-[-3px]">
-            What the satellites <span className="italic text-[#C4B5FD]">saw</span>
+            What the satellites{" "}
+            <span className="italic text-[#C4B5FD]">saw</span>
           </h1>
           <p className="mt-6 max-w-[650px] text-[15px] leading-7 text-[#B8A9D9]">
-            Every number in HomeField comes from NASA-backed satellite observations, processed ahead
-            of time so a report loads in about a second.
+            Every number in homefield comes from NASA-backed satellite
+            observations, processed ahead of time so a report loads in about a
+            second.
           </p>
 
           <ul className="mt-10 grid grid-cols-4 gap-4 max-[760px]:grid-cols-2 max-[760px]:gap-3">
@@ -95,7 +102,9 @@ export default function DataPage() {
                 <p className="text-[clamp(26px,2.6vw,36px)] font-semibold leading-none text-[#C4B5FD]">
                   {stat.value}
                 </p>
-                <p className="mt-2 text-[13px] leading-5 text-[#B8A9D9]">{stat.label}</p>
+                <p className="mt-2 text-[13px] leading-5 text-[#B8A9D9]">
+                  {stat.label}
+                </p>
               </li>
             ))}
           </ul>
@@ -110,9 +119,15 @@ export default function DataPage() {
               className="grid grid-cols-[minmax(0,320px)_minmax(0,1fr)] gap-8 rounded-3xl border border-[#1F1632] bg-[#0B0614] p-8 max-[1050px]:grid-cols-1 max-[1050px]:gap-6 max-[760px]:p-5"
             >
               <div>
-                <h2 className="text-2xl font-semibold text-[#EDE7FA]">{section.title}</h2>
-                <p className="mt-4 text-[15px] leading-7 text-[#B8A9D9]">{section.text}</p>
-                <p className="mt-5 text-[13px] leading-5 text-[#C4B5FD]">Source: {section.source}</p>
+                <h2 className="text-2xl font-semibold text-[#EDE7FA]">
+                  {section.title}
+                </h2>
+                <p className="mt-4 text-[15px] leading-7 text-[#B8A9D9]">
+                  {section.text}
+                </p>
+                <p className="mt-5 text-[13px] leading-5 text-[#C4B5FD]">
+                  Source: {section.source}
+                </p>
               </div>
               <div
                 className={`grid items-start gap-4 ${section.figures.length > 1 ? "grid-cols-2 max-[760px]:grid-cols-1" : "grid-cols-1"}`}
@@ -138,8 +153,9 @@ export default function DataPage() {
           ))}
 
           <p className="mt-4 text-xs leading-5 text-[#B8A9D9]">
-            Contains modified Copernicus Sentinel data processed by ESA, analyzed by NASA JPL/Caltech&apos;s
-            OPERA project. Landsat courtesy of USGS and NASA.
+            Contains modified Copernicus Sentinel data processed by ESA,
+            analyzed by NASA JPL/Caltech&apos;s OPERA project. Landsat courtesy
+            of USGS and NASA.
           </p>
         </div>
       </section>
