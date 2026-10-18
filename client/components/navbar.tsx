@@ -47,6 +47,7 @@ export function Navbar() {
               { label: "Home", href: "/" },
               { label: "Search", href: "/search" },
               { label: "Reports", href: "/reports" },
+              { label: "Data", href: "/data" },
             ]}
             linkComponent={Link}
             activeHref={isReports ? "/reports" : pathname}
