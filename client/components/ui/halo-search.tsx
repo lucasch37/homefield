@@ -101,8 +101,11 @@ interface HaloSearchInputProps extends InputHTMLAttributes<HTMLInputElement> {
   loadingStaggerSec?: number;
   /** Duration of each loading character’s fade-in (seconds). Default 0.36. */
   loadingCharDurationSec?: number;
+<<<<<<< HEAD
   /** Runs the avatar's WebGL shader; while false it shows a static gradient. Default true. */
   shader?: boolean;
+=======
+>>>>>>> origin/master
 }
 
 function XIcon({ className }: { className?: string }) {
@@ -340,7 +343,10 @@ export function HaloSearchInput({
   loadingText = "Searching…",
   loadingStaggerSec = DEFAULT_LOADING_STAGGER_SEC,
   loadingCharDurationSec = DEFAULT_LOADING_CHAR_DURATION_SEC,
+<<<<<<< HEAD
   shader = true,
+=======
+>>>>>>> origin/master
   disabled,
   readOnly,
   ...props
@@ -496,11 +502,19 @@ export function HaloSearchInput({
       return {
         opacityIdle: 0.88,
         primaryBg:
+<<<<<<< HEAD
           "linear-gradient(90deg, #7f6bc0, #b3a1f0, #f6f6f6, #5e4e96, #7f6bc0)",
         secondaryBg:
           "linear-gradient(90deg, #f6f6f6, #9a86db, #3f3266, #b3a1f0)",
         tertiaryBg:
           "linear-gradient(90deg, #120b1f, #5e4e96, #9a86db, #120b1f)",
+=======
+          "linear-gradient(90deg, #8b5cf6, #c4b5fd, #f6f6f6, #7c3aed, #8b5cf6)",
+        secondaryBg:
+          "linear-gradient(90deg, #f6f6f6, #a78bfa, #6d28d9, #c4b5fd)",
+        tertiaryBg:
+          "linear-gradient(90deg, #171025, #7c3aed, #a78bfa, #171025)",
+>>>>>>> origin/master
         primaryLeft: ["-8%", "92%", "-8%"],
         secondaryLeft: ["72%", "-2%", "72%"],
         tertiaryLeft: ["35%", "62%", "35%"],
@@ -517,9 +531,15 @@ export function HaloSearchInput({
     }
     return {
       opacityIdle: idleOpacity,
+<<<<<<< HEAD
       primaryBg: "linear-gradient(90deg, #7f6bc0, #b3a1f0, #7f6bc0)",
       secondaryBg: "linear-gradient(90deg, #3f3266, #9a86db, #3f3266)",
       tertiaryBg: "linear-gradient(90deg, #120b1f, #5e4e96, #120b1f)",
+=======
+      primaryBg: "linear-gradient(90deg, #8b5cf6, #c4b5fd, #8b5cf6)",
+      secondaryBg: "linear-gradient(90deg, #6d28d9, #a78bfa, #6d28d9)",
+      tertiaryBg: "linear-gradient(90deg, #171025, #7c3aed, #171025)",
+>>>>>>> origin/master
       primaryLeft: ["-5%", "75%", "-5%"],
       secondaryLeft: ["65%", "10%", "65%"],
       tertiaryLeft: ["25%", "55%", "25%"],
@@ -624,7 +644,10 @@ export function HaloSearchInput({
         >
           <AiBlobWarpAvatar
             pulseDurationSec={avatarPulseSec}
+<<<<<<< HEAD
             shader={shader}
+=======
+>>>>>>> origin/master
             warpProps={{ speed: avatarWarpSpeed }}
           />
 
@@ -906,7 +929,11 @@ export function DeletedTextBlurReveal({
 
 const DEFAULT_WARP: Partial<WarpProps> = {
   /** Matches idle `borderGlow` blobs: primary, secondary, tertiary gradient leading stops. */
+<<<<<<< HEAD
   colors: ["#9a86db", "#5e4e96", "#f6f6f6", "#7f6bc0", "#120b1f"],
+=======
+  colors: ["#a78bfa", "#7c3aed", "#f6f6f6", "#8b5cf6", "#171025"],
+>>>>>>> origin/master
   distortion: 0.25,
   // Render only what the 32px avatar shows; a 1280x720 surface cost ~600 ms a frame without a GPU.
   height: "100%",
@@ -926,12 +953,17 @@ export type AiBlobWarpAvatarProps = Omit<ComponentProps<"div">, "children"> & {
   pulseDurationSec?: number;
   /** Props forwarded to the Paper `Warp` shader (merged after defaults). */
   warpProps?: Partial<WarpProps>;
+<<<<<<< HEAD
   /** Mounts the `Warp` shader; while false the avatar shows a static gradient. Default true. */
   shader?: boolean;
 };
 
 const WARP_PLACEHOLDER = `conic-gradient(${[...(DEFAULT_WARP.colors ?? []), DEFAULT_WARP.colors?.[0]].join(", ")})`;
 
+=======
+};
+
+>>>>>>> origin/master
 /**
  * Circular avatar frame with an animated Warp shader inside.
  * Motion uses transforms only; shader speed pauses off-screen and when `prefers-reduced-motion` is set.
@@ -940,7 +972,11 @@ export const AiBlobWarpAvatar = forwardRef<
   HTMLDivElement,
   AiBlobWarpAvatarProps
 >(function AiBlobWarpAvatarImpl(
+<<<<<<< HEAD
   { className, pulseDurationSec = 5.2, warpProps, shader = true, ...props },
+=======
+  { className, pulseDurationSec = 5.2, warpProps, ...props },
+>>>>>>> origin/master
   forwardedRef,
 ) {
   const {
@@ -955,6 +991,7 @@ export const AiBlobWarpAvatar = forwardRef<
     margin: "0px 0px -10% 0px",
   });
   const live = inView && !reduceMotion;
+<<<<<<< HEAD
   const [warpMounted, setWarpMounted] = useState(false);
 
   // Creating the WebGL context stalls the main thread, so it waits a frame after `shader` turns on,
@@ -967,6 +1004,8 @@ export const AiBlobWarpAvatar = forwardRef<
       setWarpMounted(false);
     };
   }, [shader]);
+=======
+>>>>>>> origin/master
 
   const setRefs = useCallback(
     (node: HTMLDivElement | null) => {
@@ -1002,13 +1041,17 @@ export const AiBlobWarpAvatar = forwardRef<
         }
         aria-hidden
         className="pointer-events-none absolute inset-0 origin-center rounded-full"
+<<<<<<< HEAD
         style={{ background: WARP_PLACEHOLDER }}
+=======
+>>>>>>> origin/master
         transition={{
           duration: pulseDurationSec,
           ease: "easeInOut",
           repeat: Number.POSITIVE_INFINITY,
         }}
       >
+<<<<<<< HEAD
         {warpMounted && (
           <div className="size-full animate-in fade-in duration-700">
             <Warp
@@ -1018,6 +1061,13 @@ export const AiBlobWarpAvatar = forwardRef<
             />
           </div>
         )}
+=======
+        <Warp
+          {...DEFAULT_WARP}
+          {...restWarpProps}
+          speed={live ? baseSpeed : 0}
+        />
+>>>>>>> origin/master
       </motion.div>
     </div>
   );

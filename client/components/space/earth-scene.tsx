@@ -289,6 +289,7 @@ function DiveRig({
     camera.position.copy(state.startDir).applyQuaternion(partial).multiplyScalar(dist);
     state.look.lerpVectors(state.startTarget, state.target, e);
     camera.lookAt(state.look);
+<<<<<<< HEAD
     // Ease into the roll that leaves the last frame north-up, like the map that follows. It's measured at the
     // last frame, straight down at King County, because mid-dive the view can pass over the pole. Unwrapped so
     // it never jumps between -180° and 180°.
@@ -297,6 +298,8 @@ function DiveRig({
     const roll = Math.atan2(state.dir.dot(state.axis.crossVectors(state.north, state.up)), state.up.dot(state.north));
     state.roll = roll + Math.round((state.roll - roll) / (Math.PI * 2)) * Math.PI * 2;
     camera.rotateZ(-state.roll * e);
+=======
+>>>>>>> origin/master
     camera.fov = THREE.MathUtils.lerp(state.startFov, DIVE_FOV, e);
     camera.updateProjectionMatrix();
 
@@ -327,10 +330,13 @@ function createRig(camera: THREE.PerspectiveCamera) {
     target: new THREE.Vector3(),
     dir: new THREE.Vector3(),
     look: new THREE.Vector3(),
+<<<<<<< HEAD
     up: new THREE.Vector3(),
     north: new THREE.Vector3(),
     axis: new THREE.Vector3(),
     roll: 0,
+=======
+>>>>>>> origin/master
     q: new THREE.Quaternion(),
     partial: new THREE.Quaternion(),
     startedAt: null as number | null,
@@ -380,15 +386,21 @@ export default function EarthScene({
   animate,
   onReady,
   diving = false,
+<<<<<<< HEAD
   frozen = false,
+=======
+>>>>>>> origin/master
   onDip,
   onDiveEnd,
 }: {
   animate: boolean;
   onReady: () => void;
   diving?: boolean;
+<<<<<<< HEAD
   /** Stops rendering entirely, e.g. once the dive has faded to black. */
   frozen?: boolean;
+=======
+>>>>>>> origin/master
   onDip?: () => void;
   onDiveEnd?: () => void;
 }) {
@@ -399,7 +411,11 @@ export default function EarthScene({
     <Canvas
       camera={{ position: [0, 0, 8], fov: FOV }}
       dpr={[1, 1.75]}
+<<<<<<< HEAD
       frameloop={frozen ? "never" : live ? "always" : "demand"}
+=======
+      frameloop={live ? "always" : "demand"}
+>>>>>>> origin/master
       gl={{ antialias: true, alpha: true }}
       style={{ background: "transparent" }}
     >

@@ -4,7 +4,10 @@
 // instead of rounding them, so each number in a sentence can be traced back to the report.
 
 import { formatDate, formatMagnitude, formatNumber, ordinal, placeLabel, yearSpan } from "./format.ts";
+<<<<<<< HEAD
 import { impactFor } from "./impact.ts";
+=======
+>>>>>>> origin/master
 import type { Hazard, HazardKind, Report, ReportResult } from "./types.ts";
 
 export const DEFAULT_ACTIONS: Record<HazardKind, string> = {
@@ -23,10 +26,13 @@ export type Fact = {
   /** A short finding for voice answers. */
   finding: string;
   action: string;
+<<<<<<< HEAD
   /** What the finding means for living there, from the reviewed notes in impact.ts. */
   meaning: string;
   /** What to check or ask before deciding; may be empty when nothing stands out. */
   check: string;
+=======
+>>>>>>> origin/master
   score: number;
   unknown: boolean;
   skip: boolean;
@@ -42,12 +48,19 @@ export type Facts = {
   allowedNumbers: Set<string>;
 };
 
+<<<<<<< HEAD
 type Measured = Omit<Fact, "key" | "status" | "action" | "meaning" | "check">;
 
 const passes = (n: number) => `${formatNumber(n)} ${n === 1 ? "pass" : "passes"}`;
 const sentenceCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 function flood(h: Hazard): Measured {
+=======
+const passes = (n: number) => `${formatNumber(n)} ${n === 1 ? "pass" : "passes"}`;
+const sentenceCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+function flood(h: Hazard): Omit<Fact, "key" | "status" | "action"> {
+>>>>>>> origin/master
   const observed = h.observed_passes;
   const wet = h.wet_passes;
   if (h.status === "flooded" && observed !== undefined && wet !== undefined) {
@@ -87,7 +100,11 @@ export function heatLabel(h: Hazard): string | null {
   return h.status === "ok" && h.lowland_percentile !== undefined ? heatRank(h.lowland_percentile) : null;
 }
 
+<<<<<<< HEAD
 function heat(h: Hazard): Measured {
+=======
+function heat(h: Hazard): Omit<Fact, "key" | "status" | "action"> {
+>>>>>>> origin/master
   if (h.status === "ok" && h.surface_temp_f !== undefined) {
     const years = yearSpan(h.recent_years);
     const measured = `on clear summer days around noon${years ? ` in ${years}` : ""}, the ground and roof surfaces here averaged ${formatNumber(h.surface_temp_f)}°F`;
@@ -109,7 +126,11 @@ function heat(h: Hazard): Measured {
   return { score: 0, line: `Heat: UNKNOWN. ${finding}`, sentences: [finding], finding, unknown: true, skip: false };
 }
 
+<<<<<<< HEAD
 function groundMotion(h: Hazard): Measured {
+=======
+function groundMotion(h: Hazard): Omit<Fact, "key" | "status" | "action"> {
+>>>>>>> origin/master
   if (h.status === "ok" && h.velocity_mm_per_yr !== undefined) {
     const dated = (h.series_mm ?? []).map((point) => point.date);
     const period = dated.length >= 2 ? ` between ${formatDate(dated[0])} and ${formatDate(dated[dated.length - 1])}` : "";
@@ -142,8 +163,12 @@ export function buildFacts(report: Report): Facts {
   const hazards: Fact[] = (Object.keys(BUILDERS) as HazardKind[]).map((key) => {
     const h = report.hazards[key];
     const action = (h.action || DEFAULT_ACTIONS[key]).trim().replace(/\.$/, "").slice(0, 200);
+<<<<<<< HEAD
     const { meaning, check } = impactFor(key, h);
     return { key, status: h.status, action, meaning, check, ...BUILDERS[key](h) };
+=======
+    return { key, status: h.status, action, ...BUILDERS[key](h) };
+>>>>>>> origin/master
   });
   const ranked = hazards.filter((h) => !h.skip).sort((a, b) => b.score - a.score);
   // Lead with something notable (water seen, very hot, fast movement); otherwise lead with flood.
@@ -154,8 +179,12 @@ export function buildFacts(report: Report): Facts {
     .filter((text) => !DEV_NOTE.test(text))
     .map((text) => text.replace(/; (thermal detail is|reference dates change) .*$/, ".")))];
   const place = placeLabel(report);
+<<<<<<< HEAD
   const shown = hazards.filter((h) => !h.skip);
   const lines = shown.flatMap((h) => [h.line, h.meaning, h.check]);
+=======
+  const lines = hazards.filter((h) => !h.skip).map((h) => h.line);
+>>>>>>> origin/master
   return {
     place,
     hazards,
@@ -166,16 +195,20 @@ export function buildFacts(report: Report): Facts {
   };
 }
 
+<<<<<<< HEAD
 /** One prompt line: the measured fact, what it means for living there, and what to check. */
 export function impactLine(fact: Fact): string {
   return [fact.line, fact.meaning && `MEANING: ${fact.meaning}`, fact.check && `CHECK: ${fact.check}`]
     .filter(Boolean).join(" ");
 }
 
+=======
+>>>>>>> origin/master
 /** The prompt body for the summary model: only these lines, never the raw JSON. */
 export function factsPrompt(facts: Facts): string {
   return [
     `ADDRESS: ${facts.place}`,
+<<<<<<< HEAD
     `MOST SIGNIFICANT: ${facts.hazards.find((h) => h.key === facts.lead)?.line.split(":")[0] ?? "Flood"}`,
     "FACTS:",
     ...facts.hazards.filter((h) => !h.skip).map((h) => `- ${impactLine(h)}`),
@@ -198,6 +231,20 @@ export function templateSummary(facts: Facts): string {
   const checks = [lead.check, extra?.check].filter(Boolean).map((check) => lowerFirst(check!).replace(/\.$/, ""));
   if (checks.length) sentences.push(`Before deciding, ${checks.join(", and ")}.`);
   else if (facts.action) sentences.push(`A useful next step: ${lowerFirst(facts.action)}.`);
+=======
+    "FACTS:",
+    ...facts.hazards.filter((h) => !h.skip).map((h) => `- ${h.line}`),
+    `ACTION TO END WITH: ${facts.action ?? DEFAULT_ACTIONS.flood}.`,
+  ].join("\n");
+}
+
+/** A summary built only from the fact sentences, used when the AI summary is unavailable or fails checks. */
+export function templateSummary(facts: Facts): string {
+  const order = [...facts.hazards].filter((h) => !h.skip)
+    .sort((a, b) => (a.key === facts.lead ? -1 : b.key === facts.lead ? 1 : 0));
+  const sentences = order.flatMap((h) => h.sentences.slice(0, h.key === facts.lead ? 3 : 2));
+  if (facts.action) sentences.push(`A useful next step: ${facts.action.charAt(0).toLowerCase()}${facts.action.slice(1)}.`);
+>>>>>>> origin/master
   return sentences.join(" ");
 }
 
@@ -207,7 +254,11 @@ export type SummaryCheck = { ok: true } | { ok: false; reason: string };
 export function checkSummary(text: string, facts: Facts): SummaryCheck {
   const trimmed = text.trim();
   if (trimmed.length < 40) return { ok: false, reason: "too short" };
+<<<<<<< HEAD
   if (trimmed.length > 1400) return { ok: false, reason: "too long" };
+=======
+  if (trimmed.length > 1200) return { ok: false, reason: "too long" };
+>>>>>>> origin/master
   if (/\bsafe(ly|ty)?\b/i.test(trimmed)) return { ok: false, reason: "uses the word safe" };
   if (/https?:\/\/|www\./i.test(trimmed)) return { ok: false, reason: "contains a link" };
   const extra = [...numbersIn(trimmed)].filter((n) => !facts.allowedNumbers.has(n));

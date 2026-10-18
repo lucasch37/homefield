@@ -175,6 +175,7 @@
   color: var(--pn-strong);
 }
 
+<<<<<<< HEAD
 .pill-nav[data-items="pill"] .pill-nav__item[aria-current] {
   background: var(--pn-active-tile, var(--pn-tile));
   box-shadow: var(--pn-active-rim, var(--pn-tile-rim));
@@ -196,6 +197,8 @@
   background: var(--pn-active-hover, var(--pn-active-tile, var(--pn-tile)));
 }
 
+=======
+>>>>>>> origin/master
 .pill-nav__item:focus-visible,
 .pill-nav__row:focus-visible {
   outline: 2px solid var(--pn-ring);

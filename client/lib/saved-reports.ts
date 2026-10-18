@@ -1,13 +1,19 @@
+<<<<<<< HEAD
 import { isSeverity, type Severity } from "./severity.ts";
 
+=======
+>>>>>>> origin/master
 export type SavedReport = {
   address: string;
   query: string;
   summary: string;
   savedAt: string;
+<<<<<<< HEAD
   /** The lead finding in a few words; reports saved before this existed don't have one. */
   headline?: string;
   severity?: Severity;
+=======
+>>>>>>> origin/master
 };
 
 const PREFIX = "homefield_report_";
@@ -32,6 +38,7 @@ function parseCookie(value: string): SavedReport | null {
       typeof item.summary !== "string" || !item.summary ||
       typeof item.savedAt !== "string" || Number.isNaN(Date.parse(item.savedAt))
     ) return null;
+<<<<<<< HEAD
     return {
       address: item.address,
       query: item.query,
@@ -40,6 +47,9 @@ function parseCookie(value: string): SavedReport | null {
       ...(typeof item.headline === "string" && item.headline ? { headline: item.headline.slice(0, 120) } : {}),
       ...(isSeverity(item.severity) ? { severity: item.severity } : {}),
     };
+=======
+    return { address: item.address, query: item.query, summary: item.summary, savedAt: item.savedAt };
+>>>>>>> origin/master
   } catch {
     return null;
   }

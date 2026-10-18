@@ -1,14 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+<<<<<<< HEAD
 import { writeComparison, writeSummary } from '../lib/summary.ts';
+=======
+import { writeSummary } from '../lib/summary.ts';
+>>>>>>> origin/master
 import { normalizeReport } from '../lib/types.ts';
 import { classifyGeminiStatus, geminiText, pickGeminiModel } from '../lib/gemini-shared.ts';
 import { classifyXaiStatus, pickTextModel, tokenValue } from '../lib/xai-shared.ts';
 
 const report = normalizeReport(JSON.parse(readFileSync(new URL('./fixtures/carnation.json', import.meta.url), 'utf8')));
 const options = { apiKey: 'test-key', baseUrl: 'https://gemini.test/v1beta', model: 'gemini-flash-latest' };
+<<<<<<< HEAD
 const GOOD = 'Water reached this spot at least once while satellites were watching, most recently on December 10, 2025, so basements, crawl spaces, and ground-floor rooms are what to think about here. Summer surface heat is typical, averaging 84.7°F on clear days, so it is not a standout concern. Satellites could not measure ground movement here. Before deciding, ask the seller or landlord about past water and sign up for King County flood alerts.';
+=======
+const GOOD = 'Satellite radar saw water here on 1 of 281 passes, on December 10, 2025. The ground and roofs averaged 84.7°F on clear summer days. The ground movement data could not tell us anything here. Sign up for King County flood alerts.';
+>>>>>>> origin/master
 
 // Stands in for Gemini's generateContent endpoint; no network calls are made. Each call takes the next reply.
 function mockGemini(...replies) {
@@ -37,6 +45,7 @@ test('Gemini gets fact sentences, not raw JSON, and a faithful reply is used', a
   const [call] = gemini.calls;
   assert.equal(call.url, 'https://gemini.test/v1beta/models/gemini-flash-latest:generateContent');
   assert.equal(call.init.headers['x-goog-api-key'], 'test-key');
+<<<<<<< HEAD
   const system = call.body.systemInstruction.parts[0].text;
   assert.match(system, /deciding whether to live at the address/);
   assert.match(system, /your job is the impact/);
@@ -45,6 +54,12 @@ test('Gemini gets fact sentences, not raw JSON, and a faithful reply is used', a
   assert.deepEqual(call.body.generationConfig, { thinkingConfig: { thinkingLevel: 'low' } });
   const prompt = call.body.contents[0].parts[0].text;
   assert.match(prompt, /FACTS:\n- Flood: satellite radar saw water.* MEANING: .* CHECK: /);
+=======
+  assert.match(call.body.systemInstruction.parts[0].text, /Use only the FACTS/);
+  assert.deepEqual(call.body.generationConfig, { thinkingConfig: { thinkingLevel: 'low' } });
+  const prompt = call.body.contents[0].parts[0].text;
+  assert.match(prompt, /FACTS:\n- Flood: satellite radar saw water/);
+>>>>>>> origin/master
   assert.doesNotMatch(prompt, /comparison_area|longitude|"status"/);
 });
 
@@ -84,6 +99,7 @@ test('a reply calling the home safe is never shown', async () => {
   assert.equal((await writeSummary(report, { ...options, fetch: gemini.fetch })).source, 'data');
 });
 
+<<<<<<< HEAD
 test('a comparison uses a faithful Gemini reply and falls back when it computes a difference', async () => {
   const pair = ['seattle_center', 'sodo'].map((name) => normalizeReport(JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8'))));
   const reply = 'Surface heat at the Seattle Center spot averaged 91.5°F, while the SODO spot averaged 105.8°F, much hotter than typical. No flooding was observed at either place on satellite passes. Ground movement could not be measured at either place. Satellite observations cannot show that a place is free of hazards.';
@@ -103,6 +119,8 @@ test('a comparison uses a faithful Gemini reply and falls back when it computes 
   assert.match(rejected.note, /comparison is the satellite findings/);
 });
 
+=======
+>>>>>>> origin/master
 test('an unavailable model switches to one the key can use', async () => {
   const gemini = mockGemini({ status: 404, body: '{"error":{"message":"models/old is not found"}}' }, GOOD);
   const result = await writeSummary(report, { ...options, model: 'old', fetch: gemini.fetch, findModel: async () => 'gemini-3-flash-preview' });

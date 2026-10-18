@@ -3,5 +3,9 @@ uvicorn>=0.34,<1
 httpx>=0.28,<1
 pydantic>=2.9,<3
 numpy>=2.2,<3
+<<<<<<< HEAD
 rasterio>=1.4,<2
+=======
+rasterio==1.3.10
+>>>>>>> origin/master
 shapely>=2,<3

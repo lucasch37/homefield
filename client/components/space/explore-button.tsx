@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import type { MouseEvent, ReactNode } from "react";
+<<<<<<< HEAD
 import StarBorder from "@/components/ui/star-border";
+=======
+>>>>>>> origin/master
 import { DIVE_TARGET, useDive } from "./dive-context";
 import { usePrefersReducedMotion } from "./use-reduced-motion";
 
 export function ExploreButton({ className, children }: { className?: string; children: ReactNode }) {
+<<<<<<< HEAD
   const { diving, startDive, warmUp } = useDive();
+=======
+  const { diving, startDive } = useDive();
+>>>>>>> origin/master
   const reducedMotion = usePrefersReducedMotion();
 
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -17,6 +24,7 @@ export function ExploreButton({ className, children }: { className?: string; chi
   };
 
   return (
+<<<<<<< HEAD
     <StarBorder
       as={Link}
       color="#DDD3FE"
@@ -42,5 +50,10 @@ export function ExploreButton({ className, children }: { className?: string; chi
     >
       {children}
     </StarBorder>
+=======
+    <Link className={className} href={DIVE_TARGET} onClick={onClick} aria-disabled={diving || undefined}>
+      {children}
+    </Link>
+>>>>>>> origin/master
   );
 }

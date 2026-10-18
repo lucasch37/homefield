@@ -7,7 +7,11 @@ import * as THREE from "three";
 
 const MODEL_URL = "/models/landsat-8.glb";
 const DRACO_PATH = "/draco/";
+<<<<<<< HEAD
 const SPAN = 0.85;
+=======
+const SPAN = 0.6;
+>>>>>>> origin/master
 const ORBIT_SPEED = 0.24;
 // lookAt aims local +z at Earth; this turns the model so its instrument deck faces down.
 const MODEL_ROTATION: [number, number, number] = [Math.PI / 2, 0, 0];

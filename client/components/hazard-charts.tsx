@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "./ui/chart";
 import { formatDate, formatNumber, yearSpan } from "@/lib/format";
+<<<<<<< HEAD
 import {
   floodSeverity,
   groundSeverity,
@@ -34,6 +35,8 @@ import {
   severityPalette,
   type Severity,
 } from "@/lib/severity";
+=======
+>>>>>>> origin/master
 import type { Hazard, Report } from "@/lib/types";
 import {
   PopoverBody,
@@ -45,11 +48,63 @@ import {
 } from "./ui/popover";
 import "./hazard-dashboard.css";
 
+<<<<<<< HEAD
 const violet = "#9a86db";
 const lime = "#c4b5fd";
 const finite = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 export function SeverityScale() {
+=======
+const violet = "#8b5cf6";
+const lime = "#c4b5fd";
+const finite = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+type Severity = "good" | "average" | "hazardous" | "critical" | "unknown";
+const severityPalette: Record<
+  Severity,
+  { bright: string; chart: string; dark: string }
+> = {
+  good: { bright: "#c4b5fd", chart: "#8b5cf6", dark: "#2e1b4f" },
+  average: { bright: "#ffe06b", chart: "#c7a846", dark: "#5a4b20" },
+  hazardous: { bright: "#ffc078", chart: "#d77b3e", dark: "#693a23" },
+  critical: { bright: "#ff9b91", chart: "#d96f73", dark: "#842d36" },
+  unknown: { bright: "#cbd5e1", chart: "#8b7aa8", dark: "#292235" },
+};
+const severityColor = (severity: Severity) => severityPalette[severity].bright;
+const floodSeverity = (hazard?: Hazard): Severity => {
+  if (
+    !hazard ||
+    ["error", "not_enough_data", "not_available"].includes(hazard.status)
+  )
+    return "unknown";
+  if (hazard.status === "permanent_water") return "critical";
+  if (hazard.status === "no_flooding_seen") return "good";
+  if (!finite(hazard.observed_passes) || !finite(hazard.wet_passes))
+    return "unknown";
+  const ratio = hazard.wet_passes / hazard.observed_passes;
+  if (ratio < 0.05) return "average";
+  if (ratio < 0.5) return "hazardous";
+  return "critical";
+};
+const heatSeverity = (hazard?: Hazard): Severity => {
+  const percentile = hazard?.lowland_percentile ?? hazard?.county_percentile;
+  if (!finite(percentile) || hazard?.status !== "ok") return "unknown";
+  if (percentile < 50) return "good";
+  if (percentile < 75) return "average";
+  if (percentile < 90) return "hazardous";
+  return "critical";
+};
+const groundSeverity = (hazard?: Hazard): Severity => {
+  const value = hazard?.velocity_mm_per_yr;
+  if (!finite(value) || hazard?.status !== "ok") return "unknown";
+  const magnitude = Math.abs(value);
+  if (magnitude <= 5) return "good";
+  if (magnitude <= 10) return "average";
+  if (magnitude <= 20) return "hazardous";
+  return "critical";
+};
+function SeverityScale() {
+>>>>>>> origin/master
   return (
     <div className="hfd-severityScale" aria-label="Hazard severity scale">
       {(["good", "average", "hazardous", "critical"] as const).map((level) => (

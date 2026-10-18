@@ -6,9 +6,13 @@ export function ReportSummary({
   source,
   note,
   error,
+<<<<<<< HEAD
   title = "AI SUMMARY",
 }: {
   title?: string;
+=======
+}: {
+>>>>>>> origin/master
   loading: boolean;
   summary: string;
   source?: "gemini" | "data";
@@ -18,21 +22,36 @@ export function ReportSummary({
   const skeleton = "h-2.5 w-full animate-pulse rounded bg-white/10";
   return (
     <section
+<<<<<<< HEAD
       className="relative mb-[15px] overflow-hidden rounded-[22px] border bg-[#0b0614]/80 px-[clamp(22px,4vw,48px)] py-[clamp(24px,4vw,43px)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_24px_48px_-28px_rgba(0,0,0,.85)] backdrop-blur-md before:absolute before:inset-y-0 before:left-0 before:w-[3px] border-violet-300/50"
+=======
+      className="relative mb-[15px] overflow-hidden rounded-[22px] border bg-[#0d0918]/80 px-[clamp(22px,4vw,48px)] py-[clamp(24px,4vw,43px)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_24px_48px_-28px_rgba(0,0,0,.85)] backdrop-blur-md before:absolute before:inset-y-0 before:left-0 before:w-[3px] border-violet-300/50"
+>>>>>>> origin/master
       aria-busy={loading}
       aria-live="polite"
       aria-label="Summary"
     >
       <div
+<<<<<<< HEAD
         className="absolute -top-12 -right-10 size-56 rounded-full bg-violet-300/10 blur-3xl"
         aria-hidden="true"
       />
       <div className="relative flex items-center gap-2.5 text-violet-300">
+=======
+        className="absolute -top-12 -right-10 size-56 rounded-full bg-violet-400/10 blur-3xl"
+        aria-hidden="true"
+      />
+      <div className="relative flex items-center gap-2.5 text-violet-200">
+>>>>>>> origin/master
         <span className="grid size-8 place-items-center rounded-full border border-violet-300/50 bg-violet-300/10">
           <Sparkles size={16} />
         </span>
         <h3 className="text-[10px] font-semibold tracking-[1.4px] uppercase">
+<<<<<<< HEAD
           {title}
+=======
+          AI SUMMARY
+>>>>>>> origin/master
         </h3>
       </div>
       {loading ? (

@@ -8,12 +8,18 @@ export function AddressSearch({
   loading,
   onSearch,
   onClear,
+<<<<<<< HEAD
   shader,
+=======
+>>>>>>> origin/master
 }: {
   loading: boolean;
   onSearch: (query: string) => void;
   onClear?: () => void;
+<<<<<<< HEAD
   shader?: boolean;
+=======
+>>>>>>> origin/master
 }) {
   const [address, setAddress] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -103,9 +109,15 @@ export function AddressSearch({
     }
   }
   return (
+<<<<<<< HEAD
     <div className="mb-8 max-[760px]:mb-0">
       <form
         className="flex items-center gap-2 max-[760px]:flex-wrap max-[760px]:gap-[9px]"
+=======
+    <div className="mb-8 max-[760px]:mb-[25px]">
+      <form
+        className="flex items-center gap-2 max-[760px]:flex-wrap max-[760px]:gap-[9px] max-[760px]:p-[7px]"
+>>>>>>> origin/master
         onSubmit={submit}
         autoComplete="off"
         onBlur={(event) => {
@@ -121,7 +133,10 @@ export function AddressSearch({
         <div className="relative min-w-0 flex-1 max-[760px]:basis-full">
           <HaloSearchInput
             className="w-full max-w-none"
+<<<<<<< HEAD
             shader={shader}
+=======
+>>>>>>> origin/master
             id="address"
             name="address"
             autoComplete="off"
@@ -171,7 +186,11 @@ export function AddressSearch({
             <ul
               id="address-suggestions"
               role="listbox"
+<<<<<<< HEAD
               className="absolute z-30 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-violet-300/25 bg-[#0b0614]/98 p-1.5 text-left text-white shadow-[0_18px_45px_-18px_rgba(0,0,0,0.85)] backdrop-blur-xl"
+=======
+              className="absolute z-30 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-violet-300/25 bg-[#0d0918]/98 p-1.5 text-left text-white shadow-[0_18px_45px_-18px_rgba(0,0,0,0.85)] backdrop-blur-xl"
+>>>>>>> origin/master
             >
               {suggestions.map((suggestion, index) => (
                 <li
@@ -182,7 +201,11 @@ export function AddressSearch({
                 >
                   <button
                     type="button"
+<<<<<<< HEAD
                     className={`w-full rounded-xl px-4 py-3 text-left text-[12px] leading-5 transition-colors ${index === activeSuggestion ? "bg-violet-300 text-[#1e1033]" : "text-white/90 hover:bg-violet-300/10"}`}
+=======
+                    className={`w-full rounded-xl px-4 py-3 text-left text-[12px] leading-5 transition-colors ${index === activeSuggestion ? "bg-violet-400 text-[#090511]" : "text-white/90 hover:bg-violet-300/10"}`}
+>>>>>>> origin/master
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => chooseSuggestion(suggestion)}
                   >
@@ -216,11 +239,19 @@ export function AddressSearch({
           )}
         </button>
       </form>
+<<<<<<< HEAD
       <div className="flex flex-wrap items-center gap-[15px] pt-3 text-[11px] text-muted-foreground max-[760px]:flex-nowrap max-[760px]:gap-2.5 max-[760px]:overflow-x-auto max-[760px]:pb-1 max-[760px]:text-[10px] max-[760px]:[scrollbar-width:none] max-[760px]:[&::-webkit-scrollbar]:hidden">
         <span className="shrink-0">Try a place</span>
         {DEMO_PLACES.map((place) => (
           <button
             className="flex shrink-0 items-center gap-1 border-0 border-b border-border bg-transparent p-0 whitespace-nowrap text-muted-foreground hover:text-primary disabled:opacity-50"
+=======
+      <div className="flex flex-wrap items-center gap-[15px] pt-3 text-[11px] text-muted-foreground max-[760px]:gap-2.5 max-[760px]:text-[10px]">
+        <span>Try a place</span>
+        {DEMO_PLACES.map((place) => (
+          <button
+            className="flex items-center gap-1 border-0 border-b border-border bg-transparent p-0 text-muted-foreground hover:text-primary disabled:opacity-50"
+>>>>>>> origin/master
             type="button"
             key={place.label}
             disabled={loading}
@@ -232,7 +263,11 @@ export function AddressSearch({
             <ArrowUpRight size={12} />
           </button>
         ))}
+<<<<<<< HEAD
         <span className="basis-full text-[10px] opacity-80 max-[760px]:hidden">You can also enter coordinates, like “47.664, -121.92”.</span>
+=======
+        <span className="basis-full text-[10px] opacity-80">You can also enter coordinates, like “47.664, -121.92”.</span>
+>>>>>>> origin/master
       </div>
     </div>
   );
