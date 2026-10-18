@@ -3,10 +3,11 @@ if (typeof window !== "undefined") {
   (window as Window & { __hazardMap?: boolean }).__hazardMap = true;
 }
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { LocateFixed, MapPin, Satellite } from "lucide-react";
+import { ArrowUpRight, LocateFixed, MapPin, Satellite } from "lucide-react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import { finding } from "@/lib/hazards";
 import { formatCoordinate, placeLabel } from "@/lib/format";
+import { affiliateParams, redfinLinkPath, zillowUrl } from "@/lib/listing-links";
 import type { Report } from "@/lib/types";
 
 const COUNTY_CENTER: [number, number] = [-121.95, 47.48];
@@ -16,6 +17,9 @@ const INTRO_SECONDS = 2.2;
 const HERO_MARKER_OFFSET: [number, number] = [0, 250];
 const ESRI_ATTRIBUTION =
   'Imagery © <a href="https://www.esri.com/" target="_blank" rel="noreferrer">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community';
+
+// Inlined at build time; set these to your affiliate query strings (see lib/listing-links.ts).
+const ZILLOW_PARAMS = affiliateParams(process.env.NEXT_PUBLIC_ZILLOW_AFFILIATE_PARAMS);
 
 const GLASS =
   "border border-violet-300/15 bg-[#0d0918]/80 text-[#eef1ff] shadow-[0_8px_24px_-12px_rgba(0,0,0,.8)] backdrop-blur-md";
@@ -53,9 +57,8 @@ export function HazardMap({
   const marker = useRef<MapLibreMarker | null>(null);
   const [error, setError] = useState(false);
   const [ready, setReady] = useState(false);
-  const [activeLayer, setActiveLayer] = useState<
-    "flood" | "heat" | "ground_motion"
-  >("heat");
+  // The layer buttons were removed; the pin shows the heat reading.
+  const activeLayer: "flood" | "heat" | "ground_motion" = "heat";
   useEffect(() => {
     let disposed = false;
     const mark = (message: string) => {
@@ -417,25 +420,12 @@ export function HazardMap({
       <div
         className={`absolute left-[18px] flex flex-col items-start gap-2 ${hero ? "bottom-[112px] max-[760px]:bottom-[150px]" : "top-5"} ${fadeIn}`}
       >
-        <div
-          className={`flex items-center gap-[7px] rounded-md px-3 py-2.5 text-[8px] font-semibold tracking-[1.2px] ${GLASS}`}
-        >
-          <span className="size-[5px] rounded-full bg-primary" /> KING COUNTY,
-          WASHINGTON
-        </div>
         {report && (
           <div
             className={`max-w-[min(320px,calc(100vw-36px))] rounded-md px-3 py-2 text-[10px] leading-[1.5] ${GLASS}`}
             data-testid="map-reading"
           >
-            <span className="font-semibold">
-              {activeLayer === "ground_motion"
-                ? "Movement"
-                : activeLayer === "flood"
-                  ? "Flood"
-                  : "Heat"}{" "}
-              at this pin:
-            </span>{" "}
+            <span className="font-semibold">Heat at this pin:</span>{" "}
             {finding(report.hazards[activeLayer], activeLayer).label}
             {finding(report.hazards[activeLayer], activeLayer).metric
               ? ` · ${finding(report.hazards[activeLayer], activeLayer).metric}`
@@ -443,23 +433,10 @@ export function HazardMap({
           </div>
         )}
         <div
-          className={`flex gap-1 rounded-md p-1 ${GLASS}`}
-          aria-label="Hazard map layers"
+          className={`flex items-center gap-[7px] rounded-md px-3 py-2.5 text-[8px] font-semibold tracking-[1.2px] ${GLASS}`}
         >
-          {(["flood", "heat", "ground_motion"] as const).map((layer) => (
-            <button
-              key={layer}
-              className={`rounded px-2 py-1.5 text-[8px] font-medium transition-colors ${activeLayer === layer ? "bg-primary text-primary-foreground" : "hover:bg-white/10"}`}
-              type="button"
-              onClick={() => setActiveLayer(layer)}
-            >
-              {layer === "ground_motion"
-                ? "Movement"
-                : layer === "flood"
-                  ? "Flood"
-                  : "Heat"}
-            </button>
-          ))}
+          <span className="size-[5px] rounded-full bg-primary" /> KING COUNTY,
+          WASHINGTON
         </div>
       </div>
       {error && (
@@ -504,11 +481,33 @@ export function HazardMap({
                 ? label || report.address || "Selected point"
                 : "A closer look at the place you call home."}
           </strong>
-          <p className="mt-[5px] text-[10px] leading-[1.5] text-[#9aa3c7] max-[760px]:text-[9px]">
-            {report
-              ? `${formatCoordinate(report.lat)}° N · ${formatCoordinate(Math.abs(report.lon))}° W`
-              : "Start with an address. See what satellites observed."}
-          </p>
+          <div className="mt-[5px] flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <p className="m-0 text-[10px] leading-[1.5] text-[#9aa3c7] max-[760px]:text-[9px]">
+              {report
+                ? `${formatCoordinate(report.lat)}° N · ${formatCoordinate(Math.abs(report.lon))}° W`
+                : "Start with an address. See what satellites observed."}
+            </p>
+            {report?.address && !loading && (
+              <span className="pointer-events-auto flex items-center gap-1.5" data-testid="listing-links">
+                {[
+                  { name: "Zillow", href: zillowUrl(report.address, ZILLOW_PARAMS) },
+                  { name: "Redfin", href: redfinLinkPath(report.address) },
+                ].map((link) => (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    target="_blank"
+                    rel="sponsored noopener"
+                    title={`See this home on ${link.name} (partner link; Homefield may earn a commission)`}
+                    className="inline-flex items-center gap-1 rounded-full border border-violet-300/25 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-[#eef1ff] transition-colors hover:border-primary hover:bg-primary hover:text-[var(--primary-foreground)]"
+                  >
+                    {link.name}
+                    <ArrowUpRight size={11} />
+                  </a>
+                ))}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </section>

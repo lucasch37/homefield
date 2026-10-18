@@ -230,7 +230,6 @@ export default function ReportExplorer() {
               loading={loading}
               onSearch={search}
               onClear={clear}
-              listingAddress={report?.address}
             />
           </section>
         </div>
