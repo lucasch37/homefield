@@ -8,8 +8,9 @@ ground_cache/
 .venv*/
 __pycache__/
 
-# Node and Next.js build output (never commit these)
+# Node and Next.js build output
 node_modules/
+.pnpm-store/
 .next/
 out/
 *.tsbuildinfo
