@@ -11,14 +11,16 @@ import type { Report } from "@/lib/types";
 
 const COUNTY_CENTER: [number, number] = [-121.95, 47.48];
 const COUNTY_ZOOM = 8.3;
-const INTRO_ZOOM = 5.3;
-const INTRO_SECONDS = 2.2;
+// About 3,200 km across, matching the last frame of the homepage dive.
+const INTRO_ZOOM = 3.7;
+const INTRO_SECONDS = 2.6;
+const INTRO_TILE_WAIT_MS = 800;
 const HERO_MARKER_OFFSET: [number, number] = [0, 250];
 const ESRI_ATTRIBUTION =
   'Imagery © <a href="https://www.esri.com/" target="_blank" rel="noreferrer">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community';
 
 const GLASS =
-  "border border-violet-300/15 bg-[#0d0918]/80 text-[#eef1ff] shadow-[0_8px_24px_-12px_rgba(0,0,0,.8)] backdrop-blur-md";
+  "border border-violet-300/15 bg-[#0b0614]/80 text-[#eef1ff] shadow-[0_8px_24px_-12px_rgba(0,0,0,.8)] backdrop-blur-md";
 
 export function HazardMap({
   report,
@@ -29,6 +31,8 @@ export function HazardMap({
   replayIntro = 0,
   resetView = 0,
   chromeIn = true,
+  onIntroReady,
+  onIntroDone,
 }: {
   report: Report | null;
   loading: boolean;
@@ -38,9 +42,18 @@ export function HazardMap({
   replayIntro?: number;
   resetView?: number;
   chromeIn?: boolean;
+  /** The intro view has drawn and the flight is starting. */
+  onIntroReady?: () => void;
+  /** The intro flight has finished. */
+  onIntroDone?: () => void;
 }) {
   const hero = variant === "hero";
   const introPending = useRef(intro);
+  // Kept in a ref so new callbacks don't restart the flight.
+  const introCallbacks = useRef({ onIntroReady, onIntroDone });
+  useLayoutEffect(() => {
+    introCallbacks.current = { onIntroReady, onIntroDone };
+  });
   const handledReplay = useRef(replayIntro);
   // A layout effect, so a replay requested on arrival is pending before the map is created.
   useLayoutEffect(() => {
@@ -53,9 +66,6 @@ export function HazardMap({
   const marker = useRef<MapLibreMarker | null>(null);
   const [error, setError] = useState(false);
   const [ready, setReady] = useState(false);
-  const [activeLayer, setActiveLayer] = useState<
-    "flood" | "heat" | "ground_motion"
-  >("heat");
   useEffect(() => {
     let disposed = false;
     const mark = (message: string) => {
@@ -134,57 +144,9 @@ export function HazardMap({
                 data: { type: "FeatureCollection", features: [] },
               });
               instance.addLayer({
-                id: "hazard-overlay-flood-glow",
-                type: "circle",
-                source: "hazard-overlay",
-                layout: { visibility: "none" },
-                paint: {
-                  "circle-color": "#35d0c0",
-                  "circle-radius": 34,
-                  "circle-opacity": 0.22,
-                  "circle-blur": 0.9,
-                },
-              });
-              instance.addLayer({
-                id: "hazard-overlay-flood",
-                type: "circle",
-                source: "hazard-overlay",
-                layout: { visibility: "none" },
-                paint: {
-                  "circle-color": [
-                    "match",
-                    ["get", "status"],
-                    "flooded",
-                    "#ff4f9a",
-                    "permanent_water",
-                    "#27c7b7",
-                    "#d7e8df",
-                  ],
-                  "circle-radius": 15,
-                  "circle-opacity": 0.92,
-                  "circle-stroke-color": "#fff7fb",
-                  "circle-stroke-width": 3,
-                },
-              });
-              instance.addLayer({
-                id: "hazard-overlay-flood-ring",
-                type: "circle",
-                source: "hazard-overlay",
-                layout: { visibility: "none" },
-                paint: {
-                  "circle-color": "transparent",
-                  "circle-radius": 24,
-                  "circle-opacity": 0,
-                  "circle-stroke-color": "#ff7fb4",
-                  "circle-stroke-width": 2,
-                  "circle-stroke-opacity": 0.7,
-                },
-              });
-              instance.addLayer({
                 id: "hazard-overlay-heat-glow",
                 type: "circle",
                 source: "hazard-overlay",
-                layout: { visibility: "visible" },
                 paint: {
                   "circle-color": [
                     "interpolate",
@@ -206,7 +168,6 @@ export function HazardMap({
                 id: "hazard-overlay-heat",
                 type: "circle",
                 source: "hazard-overlay",
-                layout: { visibility: "visible" },
                 paint: {
                   "circle-color": [
                     "interpolate",
@@ -222,41 +183,6 @@ export function HazardMap({
                   "circle-radius": 16,
                   "circle-opacity": 0.94,
                   "circle-stroke-color": "#fff8ef",
-                  "circle-stroke-width": 3,
-                },
-              });
-              instance.addLayer({
-                id: "hazard-overlay-ground_motion-glow",
-                type: "circle",
-                source: "hazard-overlay",
-                layout: { visibility: "none" },
-                paint: {
-                  "circle-color": "#7c6cff",
-                  "circle-radius": 36,
-                  "circle-opacity": 0.28,
-                  "circle-blur": 0.9,
-                },
-              });
-              instance.addLayer({
-                id: "hazard-overlay-ground_motion",
-                type: "circle",
-                source: "hazard-overlay",
-                layout: { visibility: "none" },
-                paint: {
-                  "circle-color": "#7c6cff",
-                  "circle-radius": [
-                    "interpolate",
-                    ["linear"],
-                    ["abs", ["get", "velocity_mm_per_yr"]],
-                    0,
-                    13,
-                    5,
-                    19,
-                    15,
-                    25,
-                  ],
-                  "circle-opacity": 0.92,
-                  "circle-stroke-color": "#ffffff",
                   "circle-stroke-width": 3,
                 },
               });
@@ -299,25 +225,54 @@ export function HazardMap({
     const instance = map.current;
     if (!ready || !instance) return;
     let active = true;
+    let cancelWait: (() => void) | null = null;
     const introFlight = introPending.current;
     introPending.current = false;
     const flyTo = (center: [number, number], zoom: number) => {
-      if (introFlight) {
-        instance.setProjection({ type: "globe" });
-        instance.jumpTo({ center: COUNTY_CENTER, zoom: INTRO_ZOOM });
+      const fly = () =>
+        instance.flyTo({
+          center,
+          zoom,
+          essential: true,
+          ...(hero && { offset: HERO_MARKER_OFFSET }),
+          ...(introFlight && { duration: INTRO_SECONDS * 1000, curve: 1.2 }),
+        });
+      if (!introFlight) {
+        fly();
+        return;
       }
-      instance.flyTo({
-        center,
-        zoom,
-        essential: true,
-        ...(hero && { offset: HERO_MARKER_OFFSET }),
-        ...(introFlight && { duration: INTRO_SECONDS * 1000, curve: 1.2 }),
-      });
+      instance.setProjection({ type: "globe" });
+      instance.jumpTo({ center: COUNTY_CENTER, zoom: INTRO_ZOOM });
+      // Hold the intro view until its first tiles draw (capped), so the arrival veil lifts onto a real map.
+      const start = () => {
+        cancelWait?.();
+        cancelWait = null;
+        introCallbacks.current.onIntroReady?.();
+        instance.once("moveend", () => introCallbacks.current.onIntroDone?.());
+        fly();
+      };
+      if (instance.areTilesLoaded()) {
+        start();
+        return;
+      }
+      const timer = window.setTimeout(start, INTRO_TILE_WAIT_MS);
+      instance.once("idle", start);
+      cancelWait = () => {
+        window.clearTimeout(timer);
+        instance.off("idle", start);
+      };
+    };
+    const cleanup = () => {
+      active = false;
+      if (!cancelWait) return;
+      cancelWait();
+      introCallbacks.current.onIntroReady?.();
+      introCallbacks.current.onIntroDone?.();
     };
     marker.current?.remove();
     if (!report) {
       flyTo(COUNTY_CENTER, COUNTY_ZOOM);
-      return;
+      return cleanup;
     }
     import("maplibre-gl").then((maplibre) => {
       if (!active) return;
@@ -331,36 +286,8 @@ export function HazardMap({
         .addTo(instance);
       flyTo([report.lon, report.lat], 14);
     });
-    return () => {
-      active = false;
-    };
+    return cleanup;
   }, [hero, report, ready, replayIntro, resetView]);
-  useEffect(() => {
-    if (!ready || !map.current) return;
-    const layers = ["flood", "heat", "ground_motion"] as const;
-    for (const layer of layers) {
-      const ids =
-        layer === "flood"
-          ? [
-              "hazard-overlay-flood-glow",
-              "hazard-overlay-flood",
-              "hazard-overlay-flood-ring",
-            ]
-          : layer === "heat"
-            ? ["hazard-overlay-heat-glow", "hazard-overlay-heat"]
-            : [
-                "hazard-overlay-ground_motion-glow",
-                "hazard-overlay-ground_motion",
-              ];
-      for (const id of ids) {
-        map.current.setLayoutProperty(
-          id,
-          "visibility",
-          layer === activeLayer ? "visible" : "none",
-        );
-      }
-    }
-  }, [activeLayer, ready]);
   useEffect(() => {
     if (!ready || !map.current) return;
     const source = map.current.getSource("hazard-overlay") as
@@ -382,25 +309,17 @@ export function HazardMap({
                 type: "Point",
                 coordinates: [report.lon, report.lat],
               },
-              properties: {
-                status: report.hazards.flood.status,
-                ...(report.hazards.heat.status === "ok" &&
+              properties:
+                report.hazards.heat.status === "ok" &&
                 report.hazards.heat.surface_temp_f !== undefined
                   ? { surface_temp_f: report.hazards.heat.surface_temp_f }
-                  : {}),
-                ...(report.hazards.ground_motion.status === "ok" &&
-                report.hazards.ground_motion.velocity_mm_per_yr !== undefined
-                  ? {
-                      velocity_mm_per_yr:
-                        report.hazards.ground_motion.velocity_mm_per_yr,
-                    }
-                  : {}),
-              },
+                  : {},
             },
           ]
         : [],
     });
   }, [report, ready]);
+  const heatFinding = report ? finding(report.hazards.heat, "heat") : null;
   const fadeIn = chromeIn
     ? "opacity-100 transition-opacity duration-500"
     : "pointer-events-none opacity-0";
@@ -408,14 +327,14 @@ export function HazardMap({
     <section
       className={
         hero
-          ? "relative h-svh min-h-[520px] overflow-hidden bg-[#030207] [&_.maplibregl-ctrl-top-right]:!top-auto [&_.maplibregl-ctrl-top-right]:!bottom-[150px] [&_.maplibregl-ctrl-top-right]:!right-[10px] max-[760px]:[&_.maplibregl-ctrl-top-right]:!bottom-[190px] [&_.maplibregl-ctrl-group]:!rounded-[8px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-violet-300/15 [&_.maplibregl-ctrl-group]:!bg-[#0d0918]/90 [&_.maplibregl-ctrl-group_button_span]:invert"
+          ? "relative h-svh min-h-[520px] overflow-hidden bg-[#030207] [&_.maplibregl-ctrl-top-right]:!top-auto [&_.maplibregl-ctrl-top-right]:!bottom-[150px] [&_.maplibregl-ctrl-top-right]:!right-[10px] max-[760px]:[&_.maplibregl-ctrl-top-right]:!bottom-[140px] [&_.maplibregl-ctrl-group]:!rounded-[8px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-violet-300/15 [&_.maplibregl-ctrl-group]:!bg-[#0b0614]/90 [&_.maplibregl-ctrl-group_button_span]:invert"
           : "relative h-[clamp(430px,55vw,640px)] overflow-hidden rounded-[16px] bg-[#05060f] shadow-[0_22px_55px_-38px_#000] max-[760px]:h-[370px] [&_.maplibregl-ctrl-top-right]:!top-[14px] [&_.maplibregl-ctrl-top-right]:!right-[10px] [&_.maplibregl-ctrl-group]:!rounded-[5px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-white/10 [&_.maplibregl-ctrl-group]:!shadow-[0_1px_8px_#0006]"
       }
       aria-label="Map of the selected address"
     >
       <div ref={container} className="absolute inset-0 h-full w-full" />
       <div
-        className={`absolute left-[18px] flex flex-col items-start gap-2 ${hero ? "bottom-[112px] max-[760px]:bottom-[150px]" : "top-5"} ${fadeIn}`}
+        className={`absolute left-[18px] flex flex-col items-start gap-2 ${hero ? "bottom-[112px] max-[760px]:bottom-[100px]" : "top-5"} ${fadeIn}`}
       >
         <div
           className={`flex items-center gap-[7px] rounded-md px-3 py-2.5 text-[8px] font-semibold tracking-[1.2px] ${GLASS}`}
@@ -428,39 +347,11 @@ export function HazardMap({
             className={`max-w-[min(320px,calc(100vw-36px))] rounded-md px-3 py-2 text-[10px] leading-[1.5] ${GLASS}`}
             data-testid="map-reading"
           >
-            <span className="font-semibold">
-              {activeLayer === "ground_motion"
-                ? "Movement"
-                : activeLayer === "flood"
-                  ? "Flood"
-                  : "Heat"}{" "}
-              at this pin:
-            </span>{" "}
-            {finding(report.hazards[activeLayer], activeLayer).label}
-            {finding(report.hazards[activeLayer], activeLayer).metric
-              ? ` · ${finding(report.hazards[activeLayer], activeLayer).metric}`
-              : ""}
+            <span className="font-semibold">Heat at this pin:</span>{" "}
+            {heatFinding?.label}
+            {heatFinding?.metric ? ` · ${heatFinding.metric}` : ""}
           </div>
         )}
-        <div
-          className={`flex gap-1 rounded-md p-1 ${GLASS}`}
-          aria-label="Hazard map layers"
-        >
-          {(["flood", "heat", "ground_motion"] as const).map((layer) => (
-            <button
-              key={layer}
-              className={`rounded px-2 py-1.5 text-[8px] font-medium transition-colors ${activeLayer === layer ? "bg-primary text-primary-foreground" : "hover:bg-white/10"}`}
-              type="button"
-              onClick={() => setActiveLayer(layer)}
-            >
-              {layer === "ground_motion"
-                ? "Movement"
-                : layer === "flood"
-                  ? "Flood"
-                  : "Heat"}
-            </button>
-          ))}
-        </div>
       </div>
       {error && (
         <div
@@ -471,7 +362,7 @@ export function HazardMap({
         </div>
       )}
       <button
-        className={`absolute right-[20px] grid size-[29px] place-items-center rounded-[8px] disabled:cursor-not-allowed ${hero ? "bottom-[112px] max-[760px]:bottom-[150px]" : "top-[99px]"} ${GLASS} ${fadeIn}`}
+        className={`absolute right-[20px] grid size-[29px] place-items-center rounded-[8px] disabled:cursor-not-allowed ${hero ? "bottom-[112px] max-[760px]:bottom-[100px]" : "top-[99px]"} ${GLASS} ${fadeIn}`}
         type="button"
         aria-label="Recenter map"
         disabled={!ready}
@@ -487,7 +378,7 @@ export function HazardMap({
         <LocateFixed size={16} />
       </button>
       <div
-        className={`pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-xl px-[17px] py-[19px] max-[760px]:right-[13px] max-[760px]:bottom-[58px] max-[760px]:left-[13px] max-[760px]:p-3.5 ${GLASS} ${fadeIn}`}
+        className={`pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-xl px-[17px] py-[19px] max-[760px]:right-[13px] max-[760px]:bottom-[max(12px,env(safe-area-inset-bottom))] max-[760px]:left-[13px] max-[760px]:p-3.5 ${hero && !report && !loading ? "max-[760px]:hidden" : ""} ${GLASS} ${fadeIn}`}
       >
         <div className="grid size-[38px] shrink-0 place-items-center">
           {report ? (

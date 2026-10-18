@@ -289,6 +289,14 @@ function DiveRig({
     camera.position.copy(state.startDir).applyQuaternion(partial).multiplyScalar(dist);
     state.look.lerpVectors(state.startTarget, state.target, e);
     camera.lookAt(state.look);
+    // Ease into the roll that leaves the last frame north-up, like the map that follows. It's measured at the
+    // last frame, straight down at King County, because mid-dive the view can pass over the pole. Unwrapped so
+    // it never jumps between -180° and 180°.
+    state.up.copy(camera.up).projectOnPlane(state.dir).normalize();
+    state.north.setFromMatrixColumn(group.matrixWorld, 1).projectOnPlane(state.dir).normalize();
+    const roll = Math.atan2(state.dir.dot(state.axis.crossVectors(state.north, state.up)), state.up.dot(state.north));
+    state.roll = roll + Math.round((state.roll - roll) / (Math.PI * 2)) * Math.PI * 2;
+    camera.rotateZ(-state.roll * e);
     camera.fov = THREE.MathUtils.lerp(state.startFov, DIVE_FOV, e);
     camera.updateProjectionMatrix();
 
@@ -319,6 +327,10 @@ function createRig(camera: THREE.PerspectiveCamera) {
     target: new THREE.Vector3(),
     dir: new THREE.Vector3(),
     look: new THREE.Vector3(),
+    up: new THREE.Vector3(),
+    north: new THREE.Vector3(),
+    axis: new THREE.Vector3(),
+    roll: 0,
     q: new THREE.Quaternion(),
     partial: new THREE.Quaternion(),
     startedAt: null as number | null,
@@ -368,12 +380,15 @@ export default function EarthScene({
   animate,
   onReady,
   diving = false,
+  frozen = false,
   onDip,
   onDiveEnd,
 }: {
   animate: boolean;
   onReady: () => void;
   diving?: boolean;
+  /** Stops rendering entirely, e.g. once the dive has faded to black. */
+  frozen?: boolean;
   onDip?: () => void;
   onDiveEnd?: () => void;
 }) {
@@ -384,7 +399,7 @@ export default function EarthScene({
     <Canvas
       camera={{ position: [0, 0, 8], fov: FOV }}
       dpr={[1, 1.75]}
-      frameloop={live ? "always" : "demand"}
+      frameloop={frozen ? "never" : live ? "always" : "demand"}
       gl={{ antialias: true, alpha: true }}
       style={{ background: "transparent" }}
     >
