@@ -904,7 +904,8 @@ const DEFAULT_WARP: Partial<WarpProps> = {
   /** Matches idle `borderGlow` blobs: primary, secondary, tertiary gradient leading stops. */
   colors: ["#c9f222", "#209789", "#f6f6f6", "#73a58e", "#14473e"],
   distortion: 0.25,
-  height: 720,
+  // Render only what the 32px avatar shows; a 1280x720 surface cost ~600 ms a frame without a GPU.
+  height: "100%",
   proportion: 0.54,
   scale: 0.2,
   shape: "checks",
@@ -913,7 +914,7 @@ const DEFAULT_WARP: Partial<WarpProps> = {
   speed: 0.1,
   swirl: 0.8,
   swirlIterations: 10,
-  width: 1280,
+  width: "100%",
 };
 
 export type AiBlobWarpAvatarProps = Omit<ComponentProps<"div">, "children"> & {

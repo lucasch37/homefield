@@ -1,5 +1,0 @@
-{
-  "/api/hazards/route": "app/api/hazards/route.js",
-  "/api/voice-token/route": "app/api/voice-token/route.js",
-  "/voice-test/page": "app/voice-test/page.js"
-}

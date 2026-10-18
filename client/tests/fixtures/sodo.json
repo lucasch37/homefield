@@ -1,0 +1,141 @@
+{
+ "address": null,
+ "lat": 47.58,
+ "lon": -122.335,
+ "in_king_county": true,
+ "hazards": {
+  "flood": {
+   "status": "no_flooding_seen",
+   "observed_passes": 196,
+   "wet_passes": 0,
+   "first_wet": null,
+   "last_wet": null,
+   "source": {
+    "name": "NASA JPL OPERA DSWx-S1",
+    "dates": "",
+    "resolution_m": 30.0,
+    "limitations": [
+     "Passes are days apart and can miss a flood's peak.",
+     "Radar misses water under trees and tall crops.",
+     "Smooth surfaces such as runways and flat roofs can look like water.",
+     "The delivered files do not record the complete date range of valid passes; wet dates alone do not establish that coverage."
+    ]
+   },
+   "action": "Sign up for King County flood alerts.",
+   "message": null
+  },
+  "heat": {
+   "status": "ok",
+   "surface_temp_f": 105.8,
+   "county_percentile": null,
+   "diff_from_median_f": null,
+   "recent_relative_f": 17.5,
+   "lowland_percentile": 98.0,
+   "comparison_area": "King County west of longitude -121.9",
+   "recent_years": [
+    2023,
+    2024,
+    2025
+   ],
+   "early_years": [
+    2013,
+    2014,
+    2015,
+    2016
+   ],
+   "clear_days_used": 45,
+   "change_since_early_f": 0.0,
+   "yearly_relative_f": [
+    {
+     "year": 2013,
+     "relative_f": 19.3
+    },
+    {
+     "year": 2014,
+     "relative_f": 17.5
+    },
+    {
+     "year": 2015,
+     "relative_f": 17.2
+    },
+    {
+     "year": 2016,
+     "relative_f": 16.0
+    },
+    {
+     "year": 2017,
+     "relative_f": 17.2
+    },
+    {
+     "year": 2018,
+     "relative_f": 15.6
+    },
+    {
+     "year": 2019,
+     "relative_f": 17.6
+    },
+    {
+     "year": 2020,
+     "relative_f": 15.9
+    },
+    {
+     "year": 2021,
+     "relative_f": 15.7
+    },
+    {
+     "year": 2022,
+     "relative_f": 17.3
+    },
+    {
+     "year": 2023,
+     "relative_f": 16.3
+    },
+    {
+     "year": 2024,
+     "relative_f": 21.2
+    },
+    {
+     "year": 2025,
+     "relative_f": 18.0
+    }
+   ],
+   "source": {
+    "name": "Landsat Collection 2 surface temperature",
+    "dates": "2013-07-03, 2013-07-19, 2013-08-20, 2014-08-07, 2014-08-23, 2015-06-07, 2015-06-23, 2015-07-09, 2015-09-11, 2015-09-27, 2016-07-27, 2016-08-12, 2016-09-13, 2017-07-14, 2018-07-17, 2018-08-18, 2019-06-02, 2019-07-20, 2019-08-05, 2020-08-23, 2020-09-08, 2021-07-09, 2021-07-25, 2021-08-10, 2022-06-26, 2022-07-12, 2022-07-20, 2022-07-28, 2022-08-29, 2022-09-06, 2023-06-05, 2023-06-29, 2023-07-15, 2023-07-23, 2023-07-31, 2023-08-16, 2023-08-24, 2023-09-09, 2024-06-07, 2024-07-09, 2025-06-10, 2025-07-12, 2025-07-28, 2025-08-21, 2025-09-22",
+    "resolution_m": 30.0,
+    "limitations": [
+     "Ground and roof surface temperature around noon, not air or indoor temperature.",
+     "Clear days only; thermal detail is 100 m native, delivered at 30 m.",
+     "Relative heat averages differences from each clear day's lowland median; it is not a difference from one county-wide composite median.",
+     "Percentiles compare relative heat within lowland King County, not absolute temperature across the entire county.",
+     "Comparison area: King County west of longitude -121.9.",
+     "Recent temperature and relative heat use years: 2023, 2024, 2025."
+    ]
+   },
+   "action": "Find local cooling centers and ways to keep your home cool.",
+   "message": null
+  },
+  "ground_motion": {
+   "status": "not_enough_data",
+   "velocity_mm_per_yr": null,
+   "series_mm": [],
+   "sign_convention_verified": false,
+   "source": {
+    "name": "NASA JPL OPERA DISP-S1",
+    "dates": "2016-07-07 to 2025-10-12",
+    "resolution_m": 30.0,
+    "limitations": [
+     "Measured along the satellite's slanted view, not straight up and down.",
+     "Slow movement only, not earthquake shaking.",
+     "Readings can be unreliable in forests and farmland; reference dates change over time.",
+     "The pipeline requests independent verification of the sign convention; do not interpret the sign as vertical sinking or rising.",
+     "Velocity uses available reliable segments; missing displacement history does not necessarily invalidate velocity.",
+     "Frame F16951; displacement variable: short_wavelength_displacement."
+    ]
+   },
+   "action": "Watch for new foundation or wall cracks and ask your landlord or an inspector.",
+   "message": "No reliable ground motion observation covers this point."
+  }
+ },
+ "message": null
+}
