@@ -48,10 +48,12 @@ export class HazardVoice {
   private lastError = "";
   private getReport: () => ReportResult | null;
   private callbacks: Callbacks;
+  private location: string;
 
-  constructor(getReport: () => ReportResult | null, callbacks: Callbacks) {
+  constructor(getReport: () => ReportResult | null, callbacks: Callbacks, location = "") {
     this.getReport = getReport;
     this.callbacks = callbacks;
+    this.location = location;
   }
 
   async start() {
@@ -121,7 +123,7 @@ export class HazardVoice {
     if (this.configured || !this.context) return;
     this.configured = true;
     clearTimeout(this.configureTimer);
-    this.send(sessionUpdate(VOICE_RATE));
+    this.send(sessionUpdate(VOICE_RATE, this.location));
   }
 
   private startCapture() {

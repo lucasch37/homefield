@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AudioLines, LoaderCircle, Mic, Square } from "lucide-react";
 import type { Report } from "@/lib/types";
 import { HazardVoice, type TranscriptLine, type VoiceState } from "@/lib/voice";
+import { placeLabel } from "@/lib/format";
 
 const labels: Record<VoiceState, string> = {
   idle: "Ask with your voice",
@@ -56,7 +57,7 @@ export function VoiceControls({ report }: { report: Report | null }) {
       state: setState,
       transcript: setLines,
       error: setError,
-    });
+    }, placeLabel(report));
     void voice.current.start();
   }
 

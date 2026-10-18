@@ -33,7 +33,7 @@ export function Navbar() {
             items={[
               { label: "Home", href: "/" },
               { label: "Search", href: "/search" },
-              { label: "About", href: "/about" },
+              { label: "Reports", href: "/reports" },
             ]}
             linkComponent={Link}
             activeHref={pathname}
