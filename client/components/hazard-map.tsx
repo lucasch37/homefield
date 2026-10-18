@@ -7,7 +7,7 @@ import { ArrowUpRight, LocateFixed, MapPin, Satellite } from "lucide-react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import { finding } from "@/lib/hazards";
 import { formatCoordinate, placeLabel } from "@/lib/format";
-import { affiliateParams, redfinLinkPath, zillowUrl } from "@/lib/listing-links";
+import { affiliateParams, zillowUrl } from "@/lib/listing-links";
 import type { Report } from "@/lib/types";
 
 const COUNTY_CENTER: [number, number] = [-121.95, 47.48];
@@ -407,22 +407,16 @@ export function HazardMap({
             </p>
             {report?.address && !loading && (
               <span className="pointer-events-auto flex items-center gap-1.5" data-testid="listing-links">
-                {[
-                  { name: "Zillow", href: zillowUrl(report.address, ZILLOW_PARAMS) },
-                  { name: "Redfin", href: redfinLinkPath(report.address) },
-                ].map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    target="_blank"
-                    rel="sponsored noopener"
-                    title={`See this home on ${link.name} (partner link; Homefield may earn a commission)`}
-                    className="inline-flex items-center gap-1 rounded-full border border-violet-300/25 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-[#eef1ff] transition-colors hover:border-primary hover:bg-primary hover:text-[var(--primary-foreground)]"
-                  >
-                    {link.name}
-                    <ArrowUpRight size={11} />
-                  </a>
-                ))}
+                <a
+                  href={zillowUrl(report.address, ZILLOW_PARAMS)}
+                  target="_blank"
+                  rel="sponsored noopener"
+                  title="See this home on Zillow (partner link; Homefield may earn a commission)"
+                  className="inline-flex items-center gap-1 rounded-full border border-violet-300/25 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-[#eef1ff] transition-colors hover:border-primary hover:bg-primary hover:text-[var(--primary-foreground)]"
+                >
+                  Zillow
+                  <ArrowUpRight size={11} />
+                </a>
               </span>
             )}
           </div>

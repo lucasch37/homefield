@@ -120,12 +120,6 @@ try {
     summary: { connected: true, model: 'gemini-flash-latest' },
   });
 
-  // Redfin partner link: always redirects to Redfin (home page if found, else the ZIP code page).
-  const redfin = await fetch('http://localhost:3012/api/listing-link?site=redfin&address=400+BROAD+ST%2C+SEATTLE%2C+WA%2C+98109', { redirect: 'manual' });
-  assert.equal(redfin.status, 302);
-  assert.match(redfin.headers.get('location'), /^https:\/\/www\.redfin\.com\/.*utm_source=homefield/);
-  assert.equal((await get('/api/listing-link?site=other&address=x')).status, 400);
-
   // Pages render with compiled Tailwind CSS and never ship the API key.
   const html = await (await get('/search')).text();
   assert.ok(!html.includes(API_KEY) && !html.includes(GEMINI_KEY), 'API keys are not in the page');
