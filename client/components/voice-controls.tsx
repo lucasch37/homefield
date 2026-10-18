@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { AudioLines, LoaderCircle, Mic, Square } from "lucide-react";
+import { AudioLines } from "lucide-react";
 import type { Report } from "@/lib/types";
 import { HazardVoice, type TranscriptLine, type VoiceState } from "@/lib/voice";
 import { placeLabel } from "@/lib/format";
+import VoicePill from "./voice-pill";
 
 const labels: Record<VoiceState, string> = {
   idle: "Ask with your voice",
@@ -45,11 +46,8 @@ export function VoiceControls({ report }: { report: Report | null }) {
     };
   }, []);
 
-  function toggle() {
-    if (state !== "idle") {
-      voice.current?.stop();
-      return;
-    }
+  function start() {
+    if (state !== "idle") return;
     if (!report) return;
     setError("");
     setLines([]);
@@ -59,6 +57,10 @@ export function VoiceControls({ report }: { report: Report | null }) {
       error: setError,
     }, placeLabel(report));
     void voice.current.start();
+  }
+
+  function stop() {
+    voice.current?.stop();
   }
 
   const active = state !== "idle";
@@ -80,24 +82,21 @@ export function VoiceControls({ report }: { report: Report | null }) {
           </p>
         </div>
       </div>
-      <button
-        className="ml-auto flex items-center gap-[7px] rounded-full border border-[#c9f222] bg-accent px-4 py-[11px] text-[11px] text-background disabled:cursor-not-allowed disabled:opacity-50"
-        type="button"
-        onClick={toggle}
-        disabled={!report}
-        aria-pressed={active}
-      >
-        {state === "connecting" ? (
-          <LoaderCircle size={16} className="animate-spin" />
-        ) : active ? (
-          <Square size={14} />
-        ) : (
-          <Mic size={16} />
-        )}
-        {active && state !== "connecting"
-          ? `${labels[state]} (tap to stop)`
-          : labels[state]}
-      </button>
+      <div className="ml-auto flex min-h-11 min-w-[165px] items-center justify-end gap-3 max-[560px]:basis-full">
+        {!active && <span className="text-[11px] text-[#b9cbc6]">{labels[state]}</span>}
+        <VoicePill
+          active={active}
+          disabled={!report}
+          accentColor="#023e34"
+          iconColor="#023e34"
+          background="#c9f222"
+          size={40}
+          reach={8}
+          ariaLabel="Ask Grok about this home"
+          onStart={start}
+          onStop={stop}
+        />
+      </div>
       <p className="m-0 basis-full text-[10px] leading-[1.6] text-[#b9cbc6]">
         {report
           ? "Try “Did this place flood?” or “Is it hotter here than nearby?” Microphone audio goes to xAI only while voice is on."
