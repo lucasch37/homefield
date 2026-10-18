@@ -101,8 +101,8 @@ export function VoiceControls({ report }: { report: Report | null }) {
           active={active}
           disabled={!report}
           loading={initialLoading}
-          accentColor="#ddd3fe"
-          iconColor="#1e1033"
+          accentColor="#000000"
+          iconColor="#000000"
           background="#c4b5fd"
           size={40}
           reach={8}
