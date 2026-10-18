@@ -67,23 +67,23 @@
 .hfd-tone-hazardous:hover { background: #964b1a; }
 .hfd-tone-critical { --hfd-signal: #ff9b91; --hfd-signal-hover: #ffd0c8; border-color: #e76569; background: #8a2830; }
 .hfd-tone-critical:hover { background: #a5323a; }
-.hfd-tone-unknown { --hfd-signal: #cbd5e1; --hfd-signal-hover: #f1f5f9; border-color: #665875; background: #292235; }
-.hfd-tone-unknown:hover { background: #352b45; }
+.hfd-tone-unknown { --hfd-signal: #cbd5e1; --hfd-signal-hover: #f1f5f9; border-color: #64748b; background: #30343b; }
+.hfd-tone-unknown:hover { background: #3b424a; }
 .hfd-tone-good .hfd-sourceTrigger { border-color: #7f6bc0 !important; background: #2a1f44 !important; color: #ede9fe !important; }
 .hfd-tone-average .hfd-sourceTrigger { border-color: #f3d56a !important; background: #8a701e !important; color: #fff2a8 !important; }
 .hfd-tone-hazardous .hfd-sourceTrigger { border-color: #ffb878 !important; background: #a8561c !important; color: #ffe0b0 !important; }
 .hfd-tone-critical .hfd-sourceTrigger { border-color: #ff9b91 !important; background: #a5323a !important; color: #ffd0c8 !important; }
-.hfd-tone-unknown .hfd-sourceTrigger { border-color: #756786 !important; background: #352b45 !important; color: #f1f5f9 !important; }
+.hfd-tone-unknown .hfd-sourceTrigger { border-color: #7b8794 !important; background: #3b424a !important; color: #f1f5f9 !important; }
 .hfd-tone-good .hfd-sourceTrigger:hover { background: #513087 !important; }
 .hfd-tone-average .hfd-sourceTrigger:hover { background: #a28428 !important; }
 .hfd-tone-hazardous .hfd-sourceTrigger:hover { background: #c16624 !important; }
 .hfd-tone-critical .hfd-sourceTrigger:hover { background: #c24149 !important; }
-.hfd-tone-unknown .hfd-sourceTrigger:hover { background: #493b5e !important; }
+.hfd-tone-unknown .hfd-sourceTrigger:hover { background: #4b5563 !important; }
 .hfd-tone-good .hfd-tooltip { border-color: #9a86db !important; background: #1a1230 !important; }
 .hfd-tone-average .hfd-tooltip { border-color: #f3d56a !important; background: #80691b !important; }
 .hfd-tone-hazardous .hfd-tooltip { border-color: #ffc078 !important; background: #984b1a !important; }
 .hfd-tone-critical .hfd-tooltip { border-color: #ff9b91 !important; background: #a5323a !important; }
-.hfd-tone-unknown .hfd-tooltip { border-color: #756786 !important; background: #292235 !important; }
+.hfd-tone-unknown .hfd-tooltip { border-color: #7b8794 !important; background: #30343b !important; }
 .hfd-tone-good .hfd-delta, .hfd-tone-good .hfd-callout strong, .hfd-tone-good .hfd-ringLabel strong, .hfd-tone-good .hfd-gaugeLabel strong,
 .hfd-tone-average .hfd-delta, .hfd-tone-average .hfd-callout strong, .hfd-tone-average .hfd-ringLabel strong, .hfd-tone-average .hfd-gaugeLabel strong,
 .hfd-tone-hazardous .hfd-delta, .hfd-tone-hazardous .hfd-callout strong, .hfd-tone-hazardous .hfd-ringLabel strong, .hfd-tone-hazardous .hfd-gaugeLabel strong,

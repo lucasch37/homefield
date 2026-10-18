@@ -413,7 +413,9 @@ function HeatGauge({ hazard }: { hazard?: Hazard }) {
                   y1={(124 + Math.sin(angle) * 88).toFixed(3)}
                   x2={(130 + Math.cos(angle) * 109).toFixed(3)}
                   y2={(124 + Math.sin(angle) * 109).toFixed(3)}
-                  stroke={(i / 24) * 100 < percentile ? tone.bright : tone.dark}
+                  stroke={
+                    (i / 24) * 100 < percentile ? tone.bright : "#ffffff1c"
+                  }
                   strokeWidth="8"
                   strokeLinecap="round"
                 />

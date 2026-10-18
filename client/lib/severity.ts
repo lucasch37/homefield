@@ -9,7 +9,7 @@ export const severityPalette: Record<Severity, { bright: string; chart: string; 
   average: { bright: "#ffe06b", chart: "#c7a846", dark: "#5a4b20" },
   hazardous: { bright: "#ffc078", chart: "#d77b3e", dark: "#693a23" },
   critical: { bright: "#ff9b91", chart: "#d96f73", dark: "#842d36" },
-  unknown: { bright: "#cbd5e1", chart: "#8b7aa8", dark: "#292235" },
+  unknown: { bright: "#cbd5e1", chart: "#94a3b8", dark: "#30343b" },
 };
 
 export const severityColor = (severity: Severity) => severityPalette[severity].bright;
