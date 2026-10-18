@@ -27,13 +27,13 @@ export default function Home() {
           </div>
 
           <div
-            className={`relative z-10 mt-5 max-w-[520px] text-center min-[1200px]:absolute min-[1200px]:left-0 min-[1200px]:top-[57%] min-[1200px]:mt-0 min-[1200px]:w-[min(300px,19vw)] min-[1200px]:-translate-y-1/2 min-[1200px]:text-left ${FADE}`}
+            className={`md:pr-2 relative z-10 mt-5 max-w-[520px] text-center min-[1200px]:absolute min-[1200px]:left-0 min-[1200px]:top-[57%] min-[1200px]:mt-0 min-[1200px]:w-[min(300px,19vw)] min-[1200px]:-translate-y-1/2 min-[1200px]:text-left ${FADE}`}
           >
             <p className="m-0 text-[15px] leading-[1.8] text-slate-300/85 max-[760px]:text-[13px]">
               A clearer picture of flooding, heat, and ground movement. Observed
               from space. Made for the place you live.
             </p>
-            <ExploreButton className="mt-6 gap-[18px] px-5 py-[15px] text-xs font-semibold">
+            <ExploreButton className="mt-6 gap-2 px-5 py-[15px] text-xs font-semibold">
               Explore an address <ArrowUpRight size={17} />
             </ExploreButton>
           </div>

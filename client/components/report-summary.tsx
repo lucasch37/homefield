@@ -36,10 +36,7 @@ export function ReportSummary({
         </h3>
       </div>
       {loading ? (
-        <div
-          className="grid max-w-[880px] gap-3 pt-7"
-          aria-label="Writing the summary"
-        >
+        <div className="grid gap-3 pt-7" aria-label="Writing the summary">
           <div className={skeleton} />
           <div className={skeleton} />
           <div className={`${skeleton} w-3/5`} />
@@ -54,7 +51,7 @@ export function ReportSummary({
           />
           <div>
             <p
-              className="m-0 max-w-[900px] font-serif text-[clamp(20px,2.3vw,31px)] leading-[1.38] tracking-[-.45px] text-foreground"
+              className="m-0 font-serif text-[clamp(20px,2.3vw,31px)] leading-[1.38] tracking-[-.45px] text-foreground"
               data-testid="summary-text"
             >
               {summary ||

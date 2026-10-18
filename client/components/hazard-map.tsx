@@ -26,6 +26,15 @@ const ZILLOW_PARAMS = affiliateParams(process.env.NEXT_PUBLIC_ZILLOW_AFFILIATE_P
 const GLASS =
   "border border-violet-300/15 bg-[#0b0614]/80 text-[#eef1ff] shadow-[0_8px_24px_-12px_rgba(0,0,0,.8)] backdrop-blur-md";
 
+function collapseAttribution(map: MapLibreMap) {
+  const attribution = map
+    .getContainer()
+    .querySelector<HTMLDetailsElement>(".maplibregl-ctrl-attrib");
+  if (!attribution) return;
+  attribution.classList.remove("maplibregl-compact-show");
+  attribution.open = false;
+}
+
 export function HazardMap({
   report,
   loading,
@@ -143,6 +152,7 @@ export function HazardMap({
           );
           instance.on("load", () => {
             if (!disposed) {
+              collapseAttribution(instance);
               instance.addSource("hazard-overlay", {
                 type: "geojson",
                 data: { type: "FeatureCollection", features: [] },
