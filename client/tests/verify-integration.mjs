@@ -34,6 +34,7 @@ const xai = createServer(async (req, res) => {
   if (req.headers.authorization !== `Bearer ${API_KEY}`) { res.writeHead(401); res.end('{}'); return; }
   if (req.url === '/v1/chat/completions') res.end(JSON.stringify({ choices: [{ message: { content: chatReply } }] }));
   else if (req.url === '/v1/realtime/client_secrets') res.end(JSON.stringify({ value: 'ephemeral-test-token', expires_at: 1 }));
+  else if (req.url === '/v1/models') res.end(JSON.stringify({ data: [{ id: 'grok-4.7' }, { id: 'grok-voice-latest' }] }));
   else { res.writeHead(404); res.end('{}'); }
 });
 
@@ -102,6 +103,9 @@ try {
   assert.deepEqual(JSON.parse(tokenText), { value: 'ephemeral-test-token', url: `ws://127.0.0.1:${xaiPort}/realtime` });
   assert.ok(!tokenText.includes(API_KEY));
   assert.equal((await post('/api/voice-token', null, { Origin: 'https://evil.example' })).status, 403);
+
+  // Grok status: connected, with the configured model listed by the account.
+  assert.deepEqual(await (await get('/api/ai-status')).json(), { connected: true, model: 'grok-4.7' });
 
   // Pages render with compiled Tailwind CSS and never ship the API key.
   const html = await (await get('/search')).text();

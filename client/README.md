@@ -23,7 +23,15 @@ Open http://localhost:3000/search. The "Try a place" links include the demo poin
 | `XAI_TEXT_MODEL` | Grok summary | Defaults to `grok-4.7`; set it to a text model your xAI account can use. |
 | `XAI_BASE_URL`, `XAI_REALTIME_URL` | Tests only | Point the app at local stand-ins. Leave unset in production. |
 
-Restart the server after changing environment variables.
+The xAI variables can also live in the repository-root `.env`; values in `client/.env.local` or the real environment win. Restart the app after changing them.
+
+### Connecting Grok
+
+1. Create a key at console.x.ai with access to chat and voice (realtime), and make sure the account has credits.
+2. Put `XAI_API_KEY=...` in `client/.env.local` (or the repo-root `.env`) and restart `pnpm dev`.
+3. Open http://localhost:3000/api/ai-status. It returns `{"connected": true, ...}` or the exact reason Grok isn't connected (missing key, rejected key or permissions, no credits, model unavailable, or api.x.ai unreachable). The voice panel and the summary show the same reason.
+
+If `XAI_TEXT_MODEL` isn't available to the account, the summary switches to an available Grok text model automatically.
 
 ## How it works
 

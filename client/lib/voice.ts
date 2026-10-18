@@ -23,6 +23,8 @@ type Callbacks = {
 type RealtimeEvent = { type?: unknown; [key: string]: unknown };
 
 const DEFAULT_REALTIME_URL = "wss://api.x.ai/v1/realtime?model=grok-voice-latest";
+// Audio is resampled to the 24 kHz PCM16 that xAI documents for Grok Voice, in both directions.
+const VOICE_RATE = 24000;
 
 export class HazardVoice {
   private socket?: WebSocket;
@@ -43,6 +45,7 @@ export class HazardVoice {
   private connectTimer?: ReturnType<typeof setTimeout>;
   private configureTimer?: ReturnType<typeof setTimeout>;
   private abort = new AbortController();
+  private lastError = "";
   private getReport: () => ReportResult | null;
   private callbacks: Callbacks;
 
@@ -62,33 +65,52 @@ export class HazardVoice {
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
       if (this.stopped) return this.releaseMedia();
-      // Use the device's own rate and tell xAI about it; forcing 24 kHz breaks microphones in Firefox.
+      // Keep the device's own rate (forcing one breaks microphones in Firefox); the worklet resamples.
       this.context = new AudioContext();
       await this.context.resume();
       await this.context.audioWorklet.addModule("/pcm-capture.js");
       if (this.stopped) return;
       this.startCapture();
-      const socket = new WebSocket(allowedRealtimeUrl(token.url) ?? DEFAULT_REALTIME_URL, [`xai-client-secret.${token.value}`]);
-      this.socket = socket;
-      this.connectTimer = setTimeout(() => this.fail("Voice took too long to connect. Please try again."), 15000);
-      socket.onopen = () => {
-        // xAI announces the session first; configure on that event, or shortly after opening if it is skipped.
-        this.configureTimer = setTimeout(() => this.configure(), 1500);
-      };
-      socket.onmessage = (event) => {
-        if (this.stopped) return;
-        let message: RealtimeEvent;
-        try { message = JSON.parse(String(event.data)); } catch { return; }
-        this.handle(message);
-      };
-      socket.onerror = () => this.fail("The voice connection failed. Please try again.");
-      socket.onclose = () => { if (!this.stopped) this.fail("The voice session ended. Tap the microphone to reconnect."); };
+      this.connect(allowedRealtimeUrl(token.url) ?? DEFAULT_REALTIME_URL, token.value, false);
+      this.connectTimer = setTimeout(() => this.fail(this.lastError
+        ? `Grok Voice didn’t start: ${this.lastError}`
+        : "Grok Voice took too long to connect. Please try again."), 15000);
     } catch (error) {
       if (this.stopped) return;
       this.fail(error instanceof Error && error.name === "NotAllowedError"
         ? "Microphone access was denied. Allow microphone access in your browser to use voice."
         : error instanceof Error && error.message ? error.message : "We couldn’t start voice.");
     }
+  }
+
+  // xAI's documented browser auth is the "xai-client-secret.<token>" subprotocol. If that handshake is
+  // refused before opening, retry once with the OpenAI-compatible form, which also worked in team tests.
+  private connect(url: string, token: string, compat: boolean) {
+    const protocols = compat
+      ? ["realtime", `openai-insecure-api-key.${token}`, "openai-beta.realtime-v1"]
+      : [`xai-client-secret.${token}`];
+    const socket = new WebSocket(url, protocols);
+    this.socket = socket;
+    let opened = false;
+    socket.onopen = () => {
+      opened = true;
+      // xAI announces the session first; configure on that event, or shortly after opening if it is skipped.
+      this.configureTimer = setTimeout(() => this.configure(), 1500);
+    };
+    socket.onmessage = (event) => {
+      if (this.stopped) return;
+      let message: RealtimeEvent;
+      try { message = JSON.parse(String(event.data)); } catch { return; }
+      this.handle(message);
+    };
+    socket.onerror = () => {};
+    socket.onclose = (event) => {
+      if (this.stopped || this.socket !== socket) return;
+      if (!opened && !compat) return this.connect(url, token, true);
+      this.fail(this.ready
+        ? "The voice session ended. Tap the microphone to reconnect."
+        : `Grok Voice refused the connection${event.code && event.code !== 1006 ? ` (code ${event.code}${event.reason ? `: ${event.reason.slice(0, 120)}` : ""})` : ""}. Check that the xAI key has voice access, then try again.`);
+    };
   }
 
   private send(event: Record<string, unknown>) {
@@ -99,13 +121,13 @@ export class HazardVoice {
     if (this.configured || !this.context) return;
     this.configured = true;
     clearTimeout(this.configureTimer);
-    this.send(sessionUpdate(this.context.sampleRate));
+    this.send(sessionUpdate(VOICE_RATE));
   }
 
   private startCapture() {
     if (!this.context || !this.stream) return;
     this.input = this.context.createMediaStreamSource(this.stream);
-    this.capture = new AudioWorkletNode(this.context, "pcm-capture");
+    this.capture = new AudioWorkletNode(this.context, "pcm-capture", { processorOptions: { targetRate: VOICE_RATE } });
     this.silent = this.context.createGain();
     this.silent.gain.value = 0; // keeps the graph running without echoing the microphone
     this.capture.port.onmessage = ({ data }: MessageEvent<ArrayBuffer>) => {
@@ -175,6 +197,7 @@ export class HazardVoice {
         break;
       case "error": {
         const detail = (event.error as { message?: unknown } | undefined)?.message;
+        if (typeof detail === "string") this.lastError = detail.slice(0, 200);
         this.callbacks.error(typeof detail === "string" && detail
           ? `Grok Voice reported a problem: ${detail.slice(0, 200)}`
           : "Grok Voice couldn’t complete that request. Try asking again.");
@@ -213,7 +236,7 @@ export class HazardVoice {
     if (!this.context) return;
     const samples = base64ToFloat32(base64);
     if (!samples.length) return;
-    const buffer = this.context.createBuffer(1, samples.length, this.context.sampleRate);
+    const buffer = this.context.createBuffer(1, samples.length, VOICE_RATE);
     buffer.getChannelData(0).set(samples);
     const source = this.context.createBufferSource();
     source.buffer = buffer;

@@ -20,6 +20,15 @@ export function VoiceControls({ report }: { report: Report | null }) {
   const current = useRef(report);
   useEffect(() => { current.current = report; }, [report]);
   useEffect(() => () => { voice.current?.stop(); }, []);
+  const [status, setStatus] = useState<{ connected: boolean; message?: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/ai-status", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => { if (live) setStatus(data); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
 
   function toggle() {
     if (state !== "idle") { voice.current?.stop(); return; }
@@ -58,7 +67,10 @@ export function VoiceControls({ report }: { report: Report | null }) {
           ? "Try “Did this place flood?” or “Is it hotter here than nearby?” Microphone audio goes to xAI only while voice is on."
           : "Voice becomes available after you look up an address."}
       </p>
-      {error && <p className="m-0 basis-full text-[12px] leading-[1.7] text-destructive" role="alert">{error}</p>}
+      {status && !status.connected && !error && status.message && (
+        <p className="m-0 basis-full rounded-md bg-[#c9f222]/10 px-3 py-2 text-[12px] leading-[1.6] text-[#e8f5b0]" data-testid="grok-status">{status.message}</p>
+      )}
+      {error && <p className="m-0 basis-full text-[12px] leading-[1.7] text-[#ffb3d6]" role="alert">{error}</p>}
       {lines.length > 0 && (
         <ol className="m-0 grid basis-full list-none gap-2 border-t border-border p-0 pt-3 text-[12px] leading-[1.7]" aria-live="polite" aria-label="Voice transcript">
           {lines.map((line) => (
