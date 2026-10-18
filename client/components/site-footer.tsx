@@ -17,6 +17,9 @@ export function SiteFooter() {
         <span className="tracking-normal normal-case opacity-80">
           Earth imagery: NASA Blue Marble and Black Marble
         </span>
+        <span className="tracking-normal normal-case opacity-80">
+          Landsat 8 model: NASA 3D Resources
+        </span>
       </span>
     </footer>
   );

@@ -4,13 +4,17 @@ if (typeof window !== "undefined") {
 }
 import { fetchJSON } from "@/lib/api";
 import { normalizeReport, type Report } from "@/lib/types";
-import { MapPin } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { MapPin, Satellite } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { DIVE_FLAG } from "./space/dive-context";
+import { usePrefersReducedMotion } from "./space/use-reduced-motion";
 import { AddressSearch } from "./address-search";
 import { HazardDashboard } from "./hazard-charts";
 import { HazardMap } from "./hazard-map";
 import { ReportSummary } from "./report-summary";
 import { VoiceControls } from "./voice-controls";
+
+const PANEL_DELAY_MS = 250;
 
 export default function ReportExplorer() {
   const [report, setReport] = useState<Report | null>(null);
@@ -21,18 +25,67 @@ export default function ReportExplorer() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const request = useRef<AbortController | null>(null);
   const [searchId, setSearchId] = useState(0);
+  const [mapResets, setMapResets] = useState(0);
+  const reportRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = usePrefersReducedMotion();
+  // Only a client-side arrival from the homepage dive sets this flag, so the server render
+  // (and any direct load) always sees false.
+  const [arrivedByDive] = useState(() => {
+    try {
+      return typeof window !== "undefined" && sessionStorage.getItem(DIVE_FLAG) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const intro = arrivedByDive && !reducedMotion;
+  const [panelIn, setPanelIn] = useState(!intro);
+  const [replayIntro, setReplayIntro] = useState(0);
+  const mountedOnce = useRef(false);
 
+  // cacheComponents keeps this page alive between visits, so this also runs when the user dives
+  // in again. It's a layout effect so the panel left visible by the last visit hides before paint.
+  useLayoutEffect(() => {
+    let flagged = false;
+    try {
+      flagged = sessionStorage.getItem(DIVE_FLAG) === "1";
+      sessionStorage.removeItem(DIVE_FLAG);
+    } catch {}
+    const firstMount = !mountedOnce.current;
+    mountedOnce.current = true;
+    if (firstMount || !flagged || reducedMotion) return;
+    setPanelIn(false);
+    setReplayIntro((n) => n + 1);
+  }, [reducedMotion]);
+  useEffect(() => {
+    if (panelIn) return;
+    const timer = window.setTimeout(() => setPanelIn(true), PANEL_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [panelIn]);
   useEffect(() => () => request.current?.abort(), []);
-  async function search(address: string) {
+  function revealReport() {
+    const el = reportRef.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.72;
+    if (top > window.scrollY) window.scrollTo({ top, behavior: reducedMotion ? "auto" : "smooth" });
+  }
+  function resetResult() {
     request.current?.abort();
-    const controller = new AbortController();
-    request.current = controller;
-    setSearchId((id) => id + 1);
     setReport(null);
     setError("");
     setSummary("");
     setSummaryError("");
     setSummaryLoading(false);
+  }
+  function clear() {
+    resetResult();
+    setLoading(false);
+    setMapResets((n) => n + 1);
+  }
+  async function search(address: string) {
+    resetResult();
+    const controller = new AbortController();
+    request.current = controller;
+    setSearchId((id) => id + 1);
     setLoading(true);
     try {
       const result = normalizeReport(
@@ -48,6 +101,7 @@ export default function ReportExplorer() {
       }
       setReport(result);
       setLoading(false);
+      requestAnimationFrame(revealReport);
       setSummaryLoading(true);
       try {
         const resultSummary = await fetchJSON<{ summary: string }>(
@@ -65,7 +119,7 @@ export default function ReportExplorer() {
           setSummaryError(
             err instanceof Error
               ? err.message
-              : "The summary couldn’t load. Explore the observations below.",
+              : "The summary couldn’t load. Explore the observations above.",
           );
       } finally {
         if (!controller.signal.aborted) setSummaryLoading(false);
@@ -83,112 +137,105 @@ export default function ReportExplorer() {
   }
   const focusSection =
     "scroll-mt-7 mt-4 mb-20 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-[7px] focus-visible:outline-ring";
-  const initialState = searchId === 0 && !error;
+  const initialState = !report && !loading;
   return (
     <main
       id="main-content"
-      className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-[#f6f7f4] text-[#123d36]"
+      className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-background text-foreground"
     >
-      <section className="relative z-[1] rounded-b-[clamp(34px,5vw,72px)] bg-[#023e34] px-[6.3%] pb-[10px] text-[#f6f6f6] max-[760px]:rounded-b-[30px] max-[1050px]:px-[5%] max-[760px]:px-[6%]">
-        <div className="mx-auto max-w-[1536px]">
-          <section className="flex justify-center py-[61px] pb-[35px] max-[760px]:py-[39px] max-[760px]:pb-[29px]">
-            <div className="text-center">
-              <h1 className="font-serif text-[clamp(48px,5.1vw,73px)] font-normal leading-[1.06] tracking-[-3px] max-[760px]:text-[52px] max-[760px]:tracking-[-2px] [&_em]:font-normal [&_em]:text-ring">
-                See your home
-                <br />
-                from <em>above.</em>
-              </h1>
+      <section className="relative" aria-label="Find an address">
+        <HazardMap
+          report={report}
+          loading={loading}
+          variant="hero"
+          intro={intro}
+          replayIntro={replayIntro}
+          resetView={mapResets}
+          chromeIn={panelIn}
+        />
+        <div
+          className={`absolute top-[clamp(16px,4vh,44px)] left-1/2 z-10 w-[min(760px,calc(100%-32px))] -translate-x-1/2 rounded-[28px] border border-white/10 bg-[#0d0b24]/65 px-[clamp(18px,3vw,36px)] pt-[clamp(18px,3vh,30px)] pb-[clamp(14px,2vh,22px)] text-[#eef1ff] shadow-[0_30px_80px_-30px_rgba(0,0,0,.9)] backdrop-blur-xl ${panelIn ? "translate-y-0 opacity-100 transition-[opacity,translate] duration-500 ease-out" : "pointer-events-none translate-y-3 opacity-0"}`}
+        >
+          <h1 className="mb-[clamp(14px,2.4vh,24px)] text-center font-serif text-[clamp(34px,3.6vw,54px)] font-normal leading-[1.06] tracking-[-2px] max-[760px]:text-[34px] max-[760px]:tracking-[-1.2px]">
+            See your home from{" "}
+            <em className="bg-gradient-to-r from-teal-300 via-sky-300 to-violet-400 bg-clip-text font-normal text-transparent">
+              above.
+            </em>
+          </h1>
+          <section id="search" className="focus:outline-none" tabIndex={-1}>
+            <AddressSearch loading={loading} onSearch={search} onClear={clear} />
+          </section>
+          {error && (
+            <div
+              className="mt-3 flex items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-destructive [&_svg]:shrink-0"
+              role="alert"
+            >
+              <MapPin size={18} />
+              <p className="m-0 text-[13px] leading-[1.6]">{error}</p>
             </div>
-          </section>
-          <section
-            id="search"
-            className={focusSection}
-            aria-label="Find an address"
-            tabIndex={-1}
-          >
-            <AddressSearch loading={loading} onSearch={search} />
-          </section>
+          )}
         </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-b from-transparent to-background" />
       </section>
-      <section
-        className="mx-auto max-w-[1536px] px-[6.3%] pt-[34px] pb-[60px] text-[#123d36] max-[1050px]:px-[5%] max-[760px]:px-[6%]"
-        style={
-          {
-            "--foreground": "#123d36",
-            "--muted-foreground": "#64746f",
-            "--border": "#c8d2cc",
-            "--muted": "#edf1ed",
-            "--card": "#0d443a",
-            "--card-foreground": "#f6f6f6",
-            "--secondary": "#14473e",
-            "--secondary-foreground": "#f6f6f6",
-          } as React.CSSProperties
-        }
-      >
-        {error && (
-          <div
-            className="mt-[-10px] mb-6 flex items-center gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-[18px] py-[15px] text-destructive [&_svg]:shrink-0"
-            role="alert"
-          >
-            <MapPin size={19} />
-            <p className="m-0 text-[13px] leading-[1.6]">{error}</p>
-          </div>
-        )}
-        <div className={focusSection} id="report" tabIndex={-1}>
-          <div className="mx-auto max-w-[1240px]">
-            {/* {isDemo && (
+      <section className="hfd-space">
+        <div className="mx-auto max-w-[1536px] px-[6.3%] pt-[34px] pb-[60px] max-[1050px]:px-[5%] max-[760px]:px-[6%]">
+          <div className={focusSection} id="report" ref={reportRef} tabIndex={-1}>
+            <div className="mx-auto max-w-[1240px]">
+              {/* {isDemo && (
+                <div
+                  className="mb-5 flex items-start gap-3 rounded-md border border-[#d7e8a0] bg-[#f3f8dd] px-4 py-3 text-[#476018]"
+                  role="status"
+                >
+                  <Sparkles size={16} className="mt-0.5 shrink-0" />
+                  <p className="m-0 text-[11px] leading-[1.65]">
+                    <strong className="font-semibold">Prototype preview.</strong>{" "}
+                    This report uses placeholder observations so you can see the
+                    finished experience. Search an address to load live results.
+                  </p>
+                </div>
+              )} */}
+            </div>
+
+            {initialState ? (
               <div
-                className="mb-5 flex items-start gap-3 rounded-md border border-[#d7e8a0] bg-[#f3f8dd] px-4 py-3 text-[#476018]"
-                role="status"
+                className="mx-auto mt-10 flex min-h-[320px] max-w-[1240px] flex-col items-center justify-center gap-3 rounded-[22px] border border-white/10 bg-[#0d0b24]/55 px-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,.06)] backdrop-blur-md"
+                aria-label="Report placeholder"
               >
-                <Sparkles size={16} className="mt-0.5 shrink-0" />
-                <p className="m-0 text-[11px] leading-[1.65]">
-                  <strong className="font-semibold">Prototype preview.</strong>{" "}
-                  This report uses placeholder observations so you can see the
-                  finished experience. Search an address to load live results.
+                <span className="grid size-11 place-items-center rounded-full border border-teal-300/25 bg-teal-300/5 text-teal-200">
+                  <Satellite size={20} />
+                </span>
+                <p className="m-0 font-serif text-[22px] tracking-[-.4px]">
+                  Your report starts here.
+                </p>
+                <p className="m-0 text-xs text-slate-400">
+                  Enter a King County address above to see what satellites
+                  observed there.
                 </p>
               </div>
-            )} */}
-          </div>
+            ) : (
+              <>
+                <HazardDashboard report={report} loading={loading} />
 
-          <div
-            className="mx-auto mt-1 max-w-[1240px] border-accent border-4 rounded-2xl"
-            id="map"
-            tabIndex={-1}
-          >
-            <HazardMap report={report} loading={loading} />
-          </div>
+                {report && (
+                  <div className="mx-auto mt-10 max-w-[1240px]">
+                    <ReportSummary
+                      loading={summaryLoading}
+                      summary={summary}
+                      error={summaryError}
+                    />
+                  </div>
+                )}
 
-          {initialState ? (
-            <div
-              className="mx-auto mt-10 flex min-h-[320px] max-w-[1240px] items-center justify-center rounded-2xl bg-[#d9dcd8] px-6 text-center text-sm text-[#68736d]"
-              aria-label="Report placeholder"
-            >
-              Enter an address first to see the report.
-            </div>
-          ) : (
-            <>
-              <HazardDashboard report={report} loading={loading} />
-
-              {report && (
-                <div className="mx-auto mt-10 max-w-[1240px]">
-                  <ReportSummary
-                    loading={summaryLoading}
-                    summary={summary}
-                    error={summaryError}
-                  />
+                <div
+                  id="voice"
+                  className={`${focusSection} mx-auto max-w-[1240px]`}
+                  tabIndex={-1}
+                >
+                  <VoiceControls key={searchId} report={report} />
                 </div>
-              )}
-
-              <div
-                id="voice"
-                className={`${focusSection} mx-auto max-w-[1240px]`}
-                tabIndex={-1}
-              >
-                <VoiceControls key={searchId} report={report} />
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
       </section>
     </main>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Environment, Lightformer, Line, useTexture } from "@react-three/drei";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree, type ThreeElements } from "@react-three/fiber";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { CENTER_Y_LANDSCAPE, CENTER_Y_PORTRAIT, FILL_HEIGHT, FILL_WIDTH } from "./earth-layout";
@@ -96,13 +96,14 @@ void main() {
 
 const atmosphereFragment = /* glsl */ `
 uniform vec3 sunDir;
+uniform float fade;
 varying vec3 vNormalV;
 varying vec3 vNormalW;
 void main() {
   // Back faces: view-space normal z runs from 0 at the outer edge to about -0.47 at Earth's limb.
   float intensity = pow(smoothstep(0.0, 0.47, -normalize(vNormalV).z), 2.2);
   float lit = mix(0.25, 1.0, smoothstep(-0.4, 0.5, dot(normalize(vNormalW), sunDir)));
-  gl_FragColor = vec4(0.38, 0.66, 1.0, intensity * lit * 0.85);
+  gl_FragColor = vec4(0.38, 0.66, 1.0, intensity * lit * 0.85 * fade);
 }
 `;
 
@@ -113,46 +114,67 @@ function prepareTextures(textures: THREE.Texture | THREE.Texture[]) {
   for (const t of [day, night, ...data]) t.anisotropy = 8;
 }
 
-function CameraRig() {
+function CameraRig({ clockRef }: { clockRef: DiveClock }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const { width, height } = useThree((s) => s.size);
 
   useLayoutEffect(() => {
+    if (clockRef.current >= 0) return;
     const aspect = width / Math.max(height, 1);
     const halfHeight = Math.max(EARTH_RADIUS / FILL_HEIGHT, EARTH_RADIUS / (FILL_WIDTH * aspect));
     const centerY = aspect >= 1 ? CENTER_Y_LANDSCAPE : CENTER_Y_PORTRAIT;
     camera.position.set(0, (centerY - 0.5) * 2 * halfHeight, halfHeight / Math.tan(THREE.MathUtils.degToRad(FOV / 2)));
     camera.updateProjectionMatrix();
-  }, [camera, width, height]);
+  }, [camera, width, height, clockRef]);
 
   return null;
 }
 
-function Earth({ animate, onReady }: { animate: boolean; onReady: () => void }) {
+function Earth({
+  animate,
+  onReady,
+  spinRef,
+  clockRef,
+}: {
+  animate: boolean;
+  onReady: () => void;
+  spinRef: React.RefObject<THREE.Group | null>;
+  clockRef: DiveClock;
+}) {
   const [day, night, spec, clouds] = useTexture(TEXTURES, prepareTextures);
-  const spin = useRef<THREE.Group>(null);
   const cloudLayer = useRef<THREE.Mesh>(null);
 
   const earthUniforms = useMemo(
-    () => ({ dayMap: { value: day }, nightMap: { value: night }, specMap: { value: spec }, sunDir: { value: SUN_DIR } }),
+    () => ({
+      dayMap: { value: day },
+      nightMap: { value: night },
+      specMap: { value: spec },
+      sunDir: { value: SUN_DIR },
+    }),
     [day, night, spec],
   );
   const cloudUniforms = useMemo(() => ({ cloudMap: { value: clouds }, sunDir: { value: SUN_DIR } }), [clouds]);
-  const atmosphereUniforms = useMemo(() => ({ sunDir: { value: SUN_DIR } }), []);
+  const atmosphereUniforms = useMemo(() => ({ sunDir: { value: SUN_DIR }, fade: { value: 1 } }), []);
+  const atmosphere = useRef<THREE.ShaderMaterial>(null);
 
   useEffect(onReady, [onReady]);
 
   useFrame((_, delta) => {
     if (!animate) return;
     const dt = Math.min(delta, 0.1);
-    if (spin.current) spin.current.rotation.y += dt * SPIN_SPEED;
+    const t = clockRef.current;
+    const diving = t >= 0;
+    const spinRate = diving ? SPIN_SPEED * Math.max(0, 1 - t / DIVE_SPIN_STOP) : SPIN_SPEED;
+    if (atmosphere.current)
+      atmosphere.current.uniforms.fade.value = diving ? Math.max(0, 1 - t / (DIVE_SECONDS / 2)) : 1;
+    if (spinRef.current) spinRef.current.rotation.y += dt * spinRate;
     if (cloudLayer.current) cloudLayer.current.rotation.y += dt * (CLOUD_SPEED - SPIN_SPEED);
   });
 
   return (
     <group rotation={[VIEW_TILT, 0, 0]}>
       <group rotation={[0, 0, -AXIAL_TILT]}>
-        <group ref={spin} rotation={[0, PNW_SPIN, 0]}>
+        <group ref={spinRef} rotation={[0, PNW_SPIN, 0]}>
           <mesh>
             <sphereGeometry args={[EARTH_RADIUS, 160, 160]} />
             <shaderMaterial vertexShader={earthVertex} fragmentShader={earthFragment} uniforms={earthUniforms} />
@@ -172,6 +194,7 @@ function Earth({ animate, onReady }: { animate: boolean; onReady: () => void }) 
       <mesh>
         <sphereGeometry args={[EARTH_RADIUS * 1.13, 96, 96]} />
         <shaderMaterial
+          ref={atmosphere}
           vertexShader={atmosphereVertex}
           fragmentShader={atmosphereFragment}
           uniforms={atmosphereUniforms}
@@ -193,37 +216,204 @@ function OrbitPath({ radius }: { radius: number }) {
       }),
     [radius],
   );
-  return <Line points={points} color="#7dd3fc" lineWidth={1} transparent opacity={0.18} depthWrite={false} />;
+  return <Line points={points} color="#5eead4" lineWidth={1} transparent opacity={0.18} depthWrite={false} />;
+}
+
+// Seconds since the dive started, or -1 while idle. Shared by every part of the scene that reacts to it.
+type DiveClock = React.RefObject<number>;
+
+const DIVE_SECONDS = 1.8;
+const DIVE_SPIN_STOP = 0.4;
+const DIP_SECONDS = 0.25;
+const DIVE_FOV = 28;
+const DIVE_ALTITUDE = 2;
+const KING_COUNTY = { lat: 47.5, lon: -121.9 };
+
+// Matches SphereGeometry's equirectangular UV layout, so the point lands on the texture's King County.
+function surfacePoint(lat: number, lon: number, radius: number) {
+  const phi = ((lon + 180) / 360) * Math.PI * 2;
+  const theta = THREE.MathUtils.degToRad(90 - lat);
+  return new THREE.Vector3(
+    -radius * Math.cos(phi) * Math.sin(theta),
+    radius * Math.cos(theta),
+    radius * Math.sin(phi) * Math.sin(theta),
+  );
+}
+
+const easeInOutCubic = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+
+function DiveRig({
+  spinRef,
+  clockRef,
+  onDip,
+  onDiveEnd,
+}: {
+  spinRef: React.RefObject<THREE.Group | null>;
+  clockRef: DiveClock;
+  onDip?: () => void;
+  onDiveEnd?: () => void;
+}) {
+  const rig = useRef<ReturnType<typeof createRig> | null>(null);
+
+  useEffect(() => {
+    clockRef.current = 0;
+    return () => {
+      clockRef.current = -1;
+      const state = rig.current;
+      rig.current = null;
+      if (!state) return;
+      state.camera.position.copy(state.startPos);
+      state.camera.quaternion.copy(state.startQuaternion);
+      state.camera.fov = state.startFov;
+      state.camera.updateProjectionMatrix();
+    };
+  }, [clockRef]);
+
+  useFrame(({ camera: cam }) => {
+    if (clockRef.current < 0) return;
+    const camera = cam as THREE.PerspectiveCamera;
+    const state = (rig.current ??= createRig(camera));
+    const now = performance.now();
+    state.startedAt ??= now;
+    const t = (clockRef.current = (now - state.startedAt) / 1000);
+    const group = spinRef.current;
+    if (!group) return;
+    group.updateWorldMatrix(true, false);
+    state.target.copy(state.local).applyMatrix4(group.matrixWorld);
+
+    const e = easeInOutCubic(Math.min(1, t / DIVE_SECONDS));
+    state.dir.copy(state.target).normalize();
+    state.q.setFromUnitVectors(state.startDir, state.dir);
+    const partial = state.partial.identity().slerp(state.q, e);
+    const dist = THREE.MathUtils.lerp(state.startDist, EARTH_RADIUS * DIVE_ALTITUDE, e);
+    camera.position.copy(state.startDir).applyQuaternion(partial).multiplyScalar(dist);
+    state.look.lerpVectors(state.startTarget, state.target, e);
+    camera.lookAt(state.look);
+    camera.fov = THREE.MathUtils.lerp(state.startFov, DIVE_FOV, e);
+    camera.updateProjectionMatrix();
+
+    if (!state.dipped && t >= DIVE_SECONDS - DIP_SECONDS) {
+      state.dipped = true;
+      onDip?.();
+    }
+    if (!state.ended && t >= DIVE_SECONDS) {
+      state.ended = true;
+      onDiveEnd?.();
+    }
+  });
+
+  return null;
+}
+
+function createRig(camera: THREE.PerspectiveCamera) {
+  const startPos = camera.position.clone();
+  return {
+    camera,
+    startPos,
+    startQuaternion: camera.quaternion.clone(),
+    startDir: startPos.clone().normalize(),
+    startDist: startPos.length(),
+    startTarget: new THREE.Vector3(0, startPos.y, 0),
+    startFov: camera.fov,
+    local: surfacePoint(KING_COUNTY.lat, KING_COUNTY.lon, EARTH_RADIUS),
+    target: new THREE.Vector3(),
+    dir: new THREE.Vector3(),
+    look: new THREE.Vector3(),
+    q: new THREE.Quaternion(),
+    partial: new THREE.Quaternion(),
+    startedAt: null as number | null,
+    dipped: false,
+    ended: false,
+  };
+}
+
+// Fades its children out over the first half of the dive, and restores them once it's over.
+function DiveFade({
+  clockRef,
+  children,
+  ...props
+}: { clockRef: DiveClock; children: React.ReactNode } & ThreeElements["group"]) {
+  const group = useRef<THREE.Group>(null);
+  const faded = useRef(false);
+  useFrame(() => {
+    const g = group.current;
+    if (!g) return;
+    const idle = clockRef.current < 0;
+    if (idle && !faded.current) return;
+    faded.current = !idle;
+    const fade = idle ? 1 : Math.max(0, 1 - clockRef.current / (DIVE_SECONDS / 2));
+    g.visible = fade > 0;
+    g.traverse((node) => {
+      const material = (node as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      if (!material) return;
+      for (const m of Array.isArray(material) ? material : [material]) {
+        m.userData.baseOpacity ??= m.opacity;
+        m.userData.baseTransparent ??= m.transparent;
+        m.transparent = idle ? m.userData.baseTransparent : true;
+        m.opacity = m.userData.baseOpacity * fade;
+      }
+    });
+  });
+  return (
+    <group ref={group} {...props}>
+      {children}
+    </group>
+  );
 }
 
 const ORBIT_RADIUS = 2.05;
 const ORBIT_TILT: [number, number, number] = [0.5, 0, 0.28];
 
-export default function EarthScene({ animate, onReady }: { animate: boolean; onReady: () => void }) {
+export default function EarthScene({
+  animate,
+  onReady,
+  diving = false,
+  onDip,
+  onDiveEnd,
+}: {
+  animate: boolean;
+  onReady: () => void;
+  diving?: boolean;
+  onDip?: () => void;
+  onDiveEnd?: () => void;
+}) {
+  const spinRef = useRef<THREE.Group>(null);
+  const clockRef = useRef(-1);
+  const live = animate || diving;
   return (
     <Canvas
       camera={{ position: [0, 0, 8], fov: FOV }}
       dpr={[1, 1.75]}
-      frameloop={animate ? "always" : "demand"}
+      frameloop={live ? "always" : "demand"}
       gl={{ antialias: true, alpha: true }}
       style={{ background: "transparent" }}
     >
-      <CameraRig />
+      <CameraRig clockRef={clockRef} />
+      {diving && <DiveRig spinRef={spinRef} clockRef={clockRef} onDip={onDip} onDiveEnd={onDiveEnd} />}
       <ambientLight intensity={0.12} />
       <hemisphereLight args={["#1a2a4a", "#3a6ab0", 0.35]} />
       <directionalLight position={SUN_DIR.clone().multiplyScalar(10)} intensity={3} />
       <Environment resolution={128} frames={1}>
         <Lightformer form="rect" intensity={3} color="#fff4e0" position={[-6, 3, 7]} scale={[6, 6, 1]} />
-        <Lightformer form="rect" intensity={1.2} color="#4a7ad0" position={[0, -6, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} />
+        <Lightformer
+          form="rect"
+          intensity={1.2}
+          color="#4a7ad0"
+          position={[0, -6, 0]}
+          rotation-x={Math.PI / 2}
+          scale={[12, 12, 1]}
+        />
         <Lightformer form="ring" intensity={0.6} color="#9ab8ff" position={[6, 2, -4]} scale={3} />
       </Environment>
       <Suspense fallback={null}>
-        <Earth animate={animate} onReady={onReady} />
-        <group rotation={ORBIT_TILT}>
-          <OrbitPath radius={ORBIT_RADIUS} />
-          <Satellite animate={animate} orbitRadius={ORBIT_RADIUS} earthRadius={EARTH_RADIUS} sunDir={SUN_DIR} />
-        </group>
+        <Earth animate={live} onReady={onReady} spinRef={spinRef} clockRef={clockRef} />
       </Suspense>
+      <DiveFade clockRef={clockRef} rotation={ORBIT_TILT}>
+        <OrbitPath radius={ORBIT_RADIUS} />
+        <Suspense fallback={null}>
+          <Satellite animate={live} orbitRadius={ORBIT_RADIUS} earthRadius={EARTH_RADIUS} />
+        </Suspense>
+      </DiveFade>
     </Canvas>
   );
 }

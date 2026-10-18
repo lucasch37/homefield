@@ -6,17 +6,23 @@ import { HaloSearchInput } from "./ui/halo-search";
 export function AddressSearch({
   loading,
   onSearch,
+  onClear,
 }: {
   loading: boolean;
   onSearch: (address: string) => void;
+  onClear?: () => void;
 }) {
-  const [address, setAddress] = useState("400 Broad St, Seattle, WA 98109");
+  const [address, setAddress] = useState("");
+  function changeAddress(value: string) {
+    if (address.trim() && !value.trim()) onClear?.();
+    setAddress(value);
+  }
   function submit(event: FormEvent) {
     event.preventDefault();
     if (address.trim()) onSearch(address.trim());
   }
   return (
-    <div className="mb-8 max-[760px]:mb-[25px]">
+    <div>
       <form
         className="flex items-center gap-2 max-[760px]:flex-wrap max-[760px]:gap-[9px] max-[760px]:p-[7px]"
         onSubmit={submit}
@@ -32,8 +38,8 @@ export function AddressSearch({
           autoComplete="street-address"
           placeholder="Enter a King County address"
           value={address}
-          onChange={(event) => setAddress(event.target.value)}
-          onClear={() => setAddress("")}
+          onChange={(event) => changeAddress(event.target.value)}
+          onClear={() => changeAddress("")}
           isLoading={loading}
           loadingText="Finding your place…"
           blobTranslucent

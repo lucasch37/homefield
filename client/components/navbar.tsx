@@ -13,7 +13,7 @@ export function Navbar() {
     <>
       <header className="relative z-20 flex h-[94px] items-center justify-between max-[760px]:h-[77px]">
         <Link
-          className={`inline-flex items-center text-[27px] font-bold tracking-[-1.4px] max-[760px]:text-2xl ${isHome ? "text-[#f6f6f6]" : ""}`}
+          className={`inline-flex items-center text-[27px] font-bold tracking-[-1.4px] max-[760px]:text-2xl ${isHome ? "text-[#eef1ff]" : ""}`}
           href="/"
           aria-label="Homefield home"
         >
@@ -34,15 +34,15 @@ export function Navbar() {
             onItemClick={() => {}}
             highlightColor="var(--primary)"
             highlightTextColor="var(--primary-foreground)"
-            barColor={isHome ? "rgba(12, 18, 44, .9)" : "rgba(18, 78, 67, .96)"}
+            barColor={isHome ? "rgba(13, 11, 36, .9)" : "rgba(11, 15, 31, .96)"}
             textColor="var(--foreground)"
             size="lg"
             style={{
               "--pn-tile":
                 "linear-gradient(180deg, rgba(255,255,255,.17), rgba(255,255,255,.08))",
               "--pn-tile-rim":
-                "inset 0 0 0 1px rgba(255,255,255,.17), inset 0 1px 0 rgba(255,255,255,.2), 0 6px 14px -8px #001f1a",
-              "--pn-edge": "rgba(211, 242, 226, .42)",
+                "inset 0 0 0 1px rgba(255,255,255,.17), inset 0 1px 0 rgba(255,255,255,.2), 0 6px 14px -8px #020312",
+              "--pn-edge": "rgba(196, 210, 255, .42)",
               "--pn-rim": "rgba(255, 255, 255, .24)",
               "--pn-dot": "var(--primary)",
               "--pn-row-hover":

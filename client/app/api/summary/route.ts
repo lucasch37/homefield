@@ -5,7 +5,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          "The written summary is unavailable. You can still explore the observations below.",
+          "The written summary is unavailable. You can still explore the observations above.",
       },
       { status: 503 },
     );
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          "The written summary is unavailable. Your observation cards are still ready below.",
+          "The written summary is unavailable. Your observations are still shown above.",
       },
       { status: 502 },
     );
