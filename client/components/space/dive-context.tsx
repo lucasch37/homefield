@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 export const DIVE_FLAG = "homefield:dive";
 export const DIVE_TARGET = "/search";
+export const DIVE_NAV_EVENT = "homefield:dive-nav";
 
 type Dive = {
   diving: boolean;
@@ -31,6 +32,7 @@ export function DiveProvider({ children, className }: { children: ReactNode; cla
   useEffect(() => () => setDiving(false), []);
 
   const finishDive = useCallback(() => {
+    window.dispatchEvent(new CustomEvent(DIVE_NAV_EVENT, { detail: false }));
     try {
       sessionStorage.setItem(DIVE_FLAG, "1");
     } catch {}
@@ -40,7 +42,10 @@ export function DiveProvider({ children, className }: { children: ReactNode; cla
 
   const startDive = useCallback(() => {
     router.prefetch(DIVE_TARGET);
-    if (sceneReady) setDiving(true);
+    if (sceneReady) {
+      window.dispatchEvent(new CustomEvent(DIVE_NAV_EVENT, { detail: true }));
+      setDiving(true);
+    }
     else finishDive();
   }, [router, sceneReady, finishDive]);
 

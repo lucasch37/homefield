@@ -41,6 +41,11 @@ class MissingData(Exception):
     pass
 
 
+def tenth(value: float | None) -> float | None:
+    """Round float32 storage noise to the 0.1 mm the data team reports (-0.0 becomes 0.0)."""
+    return None if value is None else round(value, 1) + 0.0
+
+
 class PipelineMetadata(BaseModel):
     model_config = ConfigDict(extra="ignore", allow_inf_nan=False)
 
@@ -225,8 +230,8 @@ class RasterLayers:
             raise MissingData("No reliable ground motion observation covers this point.")
         if valid != 1:
             raise ValueError("Ground motion valid flag must be zero or one")
-        return GroundMotion(status="ok", velocity_mm_per_yr=velocity, source=source,
-                            series_mm=[Displacement(date=day, mm=self.value(pixel, i + 2))
+        return GroundMotion(status="ok", velocity_mm_per_yr=tenth(velocity), source=source,
+                            series_mm=[Displacement(date=day, mm=tenth(self.value(pixel, i + 2)))
                                        for i, day in enumerate(stats.node_dates)])
 
     def lookup(self, layer: LayerName, lat: float, lon: float):

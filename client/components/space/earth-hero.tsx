@@ -44,7 +44,9 @@ export default function EarthHero({ className }: { className?: string }) {
   return (
     <div
       ref={wrapper}
-      className={cn("relative [container-type:size]", className)}
+      className={diving
+        ? "pointer-events-none fixed inset-0 z-30 h-svh w-screen [container-type:size]"
+        : cn("relative [container-type:size]", className)}
       role="img"
       aria-label="A rotating Earth with a satellite orbiting it, observing the surface"
     >

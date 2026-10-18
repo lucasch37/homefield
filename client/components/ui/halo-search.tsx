@@ -493,11 +493,11 @@ export function HaloSearchInput({
       return {
         opacityIdle: 0.88,
         primaryBg:
-          "linear-gradient(90deg, #c9f222, #209789, #f6f6f6, #73a58e, #c9f222)",
+          "linear-gradient(90deg, #8b5cf6, #c4b5fd, #f6f6f6, #7c3aed, #8b5cf6)",
         secondaryBg:
-          "linear-gradient(90deg, #f6f6f6, #c9f222, #209789, #73a58e)",
+          "linear-gradient(90deg, #f6f6f6, #a78bfa, #6d28d9, #c4b5fd)",
         tertiaryBg:
-          "linear-gradient(90deg, #14473e, #209789, #c9f222, #14473e)",
+          "linear-gradient(90deg, #171025, #7c3aed, #a78bfa, #171025)",
         primaryLeft: ["-8%", "92%", "-8%"],
         secondaryLeft: ["72%", "-2%", "72%"],
         tertiaryLeft: ["35%", "62%", "35%"],
@@ -514,9 +514,9 @@ export function HaloSearchInput({
     }
     return {
       opacityIdle: idleOpacity,
-      primaryBg: "linear-gradient(90deg, #c9f222, #209789, #f6f6f6, #73a58e)",
-      secondaryBg: "linear-gradient(90deg, #73a58e, #c9f222, #209789)",
-      tertiaryBg: "linear-gradient(90deg, #14473e, #209789, #c9f222)",
+      primaryBg: "linear-gradient(90deg, #8b5cf6, #c4b5fd, #8b5cf6)",
+      secondaryBg: "linear-gradient(90deg, #6d28d9, #a78bfa, #6d28d9)",
+      tertiaryBg: "linear-gradient(90deg, #171025, #7c3aed, #171025)",
       primaryLeft: ["-5%", "75%", "-5%"],
       secondaryLeft: ["65%", "10%", "65%"],
       tertiaryLeft: ["25%", "55%", "25%"],
@@ -902,9 +902,10 @@ export function DeletedTextBlurReveal({
 
 const DEFAULT_WARP: Partial<WarpProps> = {
   /** Matches idle `borderGlow` blobs: primary, secondary, tertiary gradient leading stops. */
-  colors: ["#c9f222", "#209789", "#f6f6f6", "#73a58e", "#14473e"],
+  colors: ["#a78bfa", "#7c3aed", "#f6f6f6", "#8b5cf6", "#171025"],
   distortion: 0.25,
-  height: 720,
+  // Render only what the 32px avatar shows; a 1280x720 surface cost ~600 ms a frame without a GPU.
+  height: "100%",
   proportion: 0.54,
   scale: 0.2,
   shape: "checks",
@@ -913,7 +914,7 @@ const DEFAULT_WARP: Partial<WarpProps> = {
   speed: 0.1,
   swirl: 0.8,
   swirlIterations: 10,
-  width: 1280,
+  width: "100%",
 };
 
 export type AiBlobWarpAvatarProps = Omit<ComponentProps<"div">, "children"> & {

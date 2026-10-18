@@ -12,6 +12,14 @@ Usage:
   python -m pipelines.builders.build_flood_history                  # search, download, build
   python -m pipelines.builders.build_flood_history --skip-download  # rebuild cached downloads
 """
+
+# Support both `python -m pipelines...` and running this file directly.
+if __package__ in {None, ""}:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import argparse
 import glob
 import os

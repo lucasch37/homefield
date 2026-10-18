@@ -5,19 +5,25 @@ if (typeof window !== "undefined") {
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LocateFixed, MapPin, Satellite } from "lucide-react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
+import { finding } from "@/lib/hazards";
+import { formatCoordinate, placeLabel } from "@/lib/format";
 import type { Report } from "@/lib/types";
 
 const COUNTY_CENTER: [number, number] = [-121.95, 47.48];
 const COUNTY_ZOOM = 8.3;
 const INTRO_ZOOM = 5.3;
 const INTRO_SECONDS = 2.2;
+const HERO_MARKER_OFFSET: [number, number] = [0, 250];
+const ESRI_ATTRIBUTION =
+  'Imagery © <a href="https://www.esri.com/" target="_blank" rel="noreferrer">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community';
 
 const GLASS =
-  "border border-white/10 bg-[#0d0b24]/70 text-[#eef1ff] shadow-[0_8px_24px_-12px_rgba(0,0,0,.8)] backdrop-blur-md";
+  "border border-violet-300/15 bg-[#0d0918]/80 text-[#eef1ff] shadow-[0_8px_24px_-12px_rgba(0,0,0,.8)] backdrop-blur-md";
 
 export function HazardMap({
   report,
   loading,
+  label,
   variant = "card",
   intro = false,
   replayIntro = 0,
@@ -26,6 +32,7 @@ export function HazardMap({
 }: {
   report: Report | null;
   loading: boolean;
+  label?: string;
   variant?: "hero" | "card";
   intro?: boolean;
   replayIntro?: number;
@@ -76,6 +83,7 @@ export function HazardMap({
                     "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
                   ],
                   tileSize: 256,
+                  attribution: ESRI_ATTRIBUTION,
                 },
 
                 labels: {
@@ -302,6 +310,7 @@ export function HazardMap({
         center,
         zoom,
         essential: true,
+        ...(hero && { offset: HERO_MARKER_OFFSET }),
         ...(introFlight && { duration: INTRO_SECONDS * 1000, curve: 1.2 }),
       });
     };
@@ -315,7 +324,7 @@ export function HazardMap({
       const pin = document.createElement("div");
       pin.className =
         "size-[22px] rounded-full border-4 border-white bg-[var(--brand-accent)] shadow-[0_0_0_12px_color-mix(in_srgb,var(--brand-accent),transparent_82%),0_2px_10px_#0004]";
-      pin.setAttribute("aria-label", report.address);
+      pin.setAttribute("aria-label", placeLabel(report));
       pin.setAttribute("role", "img");
       marker.current = new maplibre.Marker({ element: pin })
         .setLngLat([report.lon, report.lat])
@@ -325,7 +334,7 @@ export function HazardMap({
     return () => {
       active = false;
     };
-  }, [report, ready, replayIntro, resetView]);
+  }, [hero, report, ready, replayIntro, resetView]);
   useEffect(() => {
     if (!ready || !map.current) return;
     const layers = ["flood", "heat", "ground_motion"] as const;
@@ -375,9 +384,17 @@ export function HazardMap({
               },
               properties: {
                 status: report.hazards.flood.status,
-                surface_temp_f: report.hazards.heat.surface_temp_f ?? 0,
-                velocity_mm_per_yr:
-                  report.hazards.ground_motion.velocity_mm_per_yr ?? 0,
+                ...(report.hazards.heat.status === "ok" &&
+                report.hazards.heat.surface_temp_f !== undefined
+                  ? { surface_temp_f: report.hazards.heat.surface_temp_f }
+                  : {}),
+                ...(report.hazards.ground_motion.status === "ok" &&
+                report.hazards.ground_motion.velocity_mm_per_yr !== undefined
+                  ? {
+                      velocity_mm_per_yr:
+                        report.hazards.ground_motion.velocity_mm_per_yr,
+                    }
+                  : {}),
               },
             },
           ]
@@ -391,7 +408,7 @@ export function HazardMap({
     <section
       className={
         hero
-          ? "relative h-[calc(100svh-94px)] min-h-[520px] overflow-hidden bg-[#05060f] max-[760px]:h-[calc(100svh-77px)] [&_.maplibregl-ctrl-top-right]:!top-auto [&_.maplibregl-ctrl-top-right]:!bottom-[150px] [&_.maplibregl-ctrl-top-right]:!right-[10px] max-[760px]:[&_.maplibregl-ctrl-top-right]:!bottom-[190px] [&_.maplibregl-ctrl-group]:!rounded-[8px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-white/10 [&_.maplibregl-ctrl-group]:!bg-[#0d0b24]/80 [&_.maplibregl-ctrl-group_button_span]:invert"
+          ? "relative h-svh min-h-[520px] overflow-hidden bg-[#030207] [&_.maplibregl-ctrl-top-right]:!top-auto [&_.maplibregl-ctrl-top-right]:!bottom-[150px] [&_.maplibregl-ctrl-top-right]:!right-[10px] max-[760px]:[&_.maplibregl-ctrl-top-right]:!bottom-[190px] [&_.maplibregl-ctrl-group]:!rounded-[8px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-violet-300/15 [&_.maplibregl-ctrl-group]:!bg-[#0d0918]/90 [&_.maplibregl-ctrl-group_button_span]:invert"
           : "relative h-[clamp(430px,55vw,640px)] overflow-hidden rounded-[16px] bg-[#05060f] shadow-[0_22px_55px_-38px_#000] max-[760px]:h-[370px] [&_.maplibregl-ctrl-top-right]:!top-[14px] [&_.maplibregl-ctrl-top-right]:!right-[10px] [&_.maplibregl-ctrl-group]:!rounded-[5px] [&_.maplibregl-ctrl-group]:!border [&_.maplibregl-ctrl-group]:!border-white/10 [&_.maplibregl-ctrl-group]:!shadow-[0_1px_8px_#0006]"
       }
       aria-label="Map of the selected address"
@@ -406,6 +423,25 @@ export function HazardMap({
           <span className="size-[5px] rounded-full bg-primary" /> KING COUNTY,
           WASHINGTON
         </div>
+        {report && (
+          <div
+            className={`max-w-[min(320px,calc(100vw-36px))] rounded-md px-3 py-2 text-[10px] leading-[1.5] ${GLASS}`}
+            data-testid="map-reading"
+          >
+            <span className="font-semibold">
+              {activeLayer === "ground_motion"
+                ? "Movement"
+                : activeLayer === "flood"
+                  ? "Flood"
+                  : "Heat"}{" "}
+              at this pin:
+            </span>{" "}
+            {finding(report.hazards[activeLayer], activeLayer).label}
+            {finding(report.hazards[activeLayer], activeLayer).metric
+              ? ` · ${finding(report.hazards[activeLayer], activeLayer).metric}`
+              : ""}
+          </div>
+        )}
         <div
           className={`flex gap-1 rounded-md p-1 ${GLASS}`}
           aria-label="Hazard map layers"
@@ -435,7 +471,7 @@ export function HazardMap({
         </div>
       )}
       <button
-        className={`absolute right-[10px] grid size-[29px] place-items-center rounded-[8px] disabled:cursor-not-allowed ${hero ? "bottom-[112px] max-[760px]:bottom-[150px]" : "top-[99px]"} ${GLASS} ${fadeIn}`}
+        className={`absolute right-[20px] grid size-[29px] place-items-center rounded-[8px] disabled:cursor-not-allowed ${hero ? "bottom-[112px] max-[760px]:bottom-[150px]" : "top-[99px]"} ${GLASS} ${fadeIn}`}
         type="button"
         aria-label="Recenter map"
         disabled={!ready}
@@ -444,6 +480,7 @@ export function HazardMap({
             center: report ? [report.lon, report.lat] : COUNTY_CENTER,
             zoom: report ? 14 : COUNTY_ZOOM,
             essential: true,
+            ...(hero && { offset: HERO_MARKER_OFFSET }),
           })
         }
       >
@@ -452,20 +489,24 @@ export function HazardMap({
       <div
         className={`pointer-events-none absolute right-[19px] bottom-[20px] left-[19px] flex items-center gap-[13px] rounded-xl px-[17px] py-[19px] max-[760px]:right-[13px] max-[760px]:bottom-[58px] max-[760px]:left-[13px] max-[760px]:p-3.5 ${GLASS} ${fadeIn}`}
       >
-        <div className="grid size-[38px] shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-          {report ? <MapPin size={20} /> : <Satellite size={21} />}
+        <div className="grid size-[38px] shrink-0 place-items-center">
+          {report ? (
+            <MapPin size={32} strokeWidth={1} />
+          ) : (
+            <Satellite size={32} strokeWidth={1} />
+          )}
         </div>
         <div>
           <strong className="block text-xs leading-[1.5] font-medium max-[760px]:text-[11px]">
             {loading
               ? "Finding your place…"
               : report
-                ? report.address
+                ? label || report.address || "Selected point"
                 : "A closer look at the place you call home."}
           </strong>
           <p className="mt-[5px] text-[10px] leading-[1.5] text-[#9aa3c7] max-[760px]:text-[9px]">
             {report
-              ? `${report.lat.toFixed(5)}° N · ${Math.abs(report.lon).toFixed(5)}° W`
+              ? `${formatCoordinate(report.lat)}° N · ${formatCoordinate(Math.abs(report.lon))}° W`
               : "Start with an address. See what satellites observed."}
           </p>
         </div>
