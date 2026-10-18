@@ -4,6 +4,7 @@ import { MapPin } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import PillNav from "./ui/pill-nav/pill-nav";
+import Image from "next/image";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -13,13 +14,21 @@ export function Navbar() {
     <>
       <header className="relative z-20 flex h-[94px] items-center justify-between max-[760px]:h-[77px]">
         <Link
-          className={`inline-flex items-center text-[27px] font-bold tracking-[-1.4px] max-[760px]:text-2xl ${isHome ? "text-[#f6f6f6]" : ""}`}
+          className={`inline-flex items-center text-[27px] font-bold tracking-normal max-[760px]:text-2xl ${isHome ? "text-[#f6f6f6]" : ""}`}
           href="/"
           aria-label="Homefield home"
         >
+          <Image
+            src={"/icon-white.svg"}
+            alt="Description"
+            className="mr-2"
+            width={26}
+            height={26}
+            unoptimized // Tells Next.js not to waste server resources optimizing a vector
+          />
           homefield<span className="text-[var(--brand-accent)]">.</span>
         </Link>
-        <div className="max-[760px]:w-[min(150px,44vw)] max-[760px]:shrink-0">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-[760px]:w-[min(150px,44vw)] max-[760px]:shrink-0">
           <PillNav
             items={[
               { label: "Home", href: "/" },
